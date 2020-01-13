@@ -1,0 +1,21 @@
+{
+  "name": "my-ts-starter",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "description": "",
+  "homepage": "https://www.ideamans.com/",
+  "scripts": {
+    "test": "ava-ts -v test/**/test-*.ts",
+    "watch": "ava-ts -vw test/**/test-*.ts",
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^12.12.16",
+    "ava": "^2.4.0",
+    "ava-ts": "^0.25.2",
+    "ts-node": "^8.5.4",
+    "typescript": "^3.7.3"
+  }
+}
