@@ -8,14 +8,31 @@
     "test": "ava-ts -v test/**/test-*.ts",
     "watch": "ava-ts -vw test/**/test-*.ts",
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "debug": "ts-node src/debug.ts"
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/axios": "^0.14.0",
+    "@types/get-port": "^4.2.0",
+    "@types/http-server": "^0.10.0",
+    "@types/js-levenshtein": "^1.1.0",
     "@types/node": "^12.12.16",
+    "@types/request": "^2.48.4",
     "ava": "^2.4.0",
     "ava-ts": "^0.25.2",
+    "axios": "^0.19.2",
+    "get-port": "^5.1.1",
+    "http-server": "^0.12.1",
+    "request": "^2.88.2",
+    "tmp-promise": "^2.0.2",
     "ts-node": "^8.5.4",
     "typescript": "^3.7.3"
+  },
+  "dependencies": {
+    "@types/fs-extra": "^8.1.0",
+    "fs-extra": "^9.0.0",
+    "http-mitm-proxy": "^0.8.2",
+    "js-levenshtein": "^1.1.6"
   }
 }

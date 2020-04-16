@@ -82,3 +82,6 @@ typings/
 .dynamodb/
 
 dist/
+
+tmp/
+.http-mitm-proxy/
