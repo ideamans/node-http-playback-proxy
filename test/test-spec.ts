@@ -2,7 +2,7 @@ import { Resource, Spec } from '../src/spec'
 import anyTest, { TestInterface } from 'ava'
 const test = anyTest as TestInterface<{ mycontext: any }>
 
-test('Resourceについて', (t) => {
+test('About resource', (t) => {
   const res = new Resource({
     url: 'https://www.example.com/path/to/file?name=value',
   })

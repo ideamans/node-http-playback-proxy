@@ -1,13 +1,17 @@
 import { ProxyUrl } from './url'
 import Levenshtein from 'js-levenshtein'
 
+export type HeadersType = { [prop: string]: any }
+
 export class Resource {
   method: string = 'get'
   url: string = ''
   path: string = ''
-  headers: { [prop: string]: any } = {}
+  headers: HeadersType = {}
   ttfb: number = 0
-  originalLength: number = 0
+  originalResourceSize: number = 0
+  originalTransferSize: number = 0
+  originalContentEncoding: string = ''
   originalDuration: number = 0
 
   constructor(values: Partial<Resource> = {}) {
@@ -16,7 +20,9 @@ export class Resource {
     if (values.path !== undefined) this.path = values.path
     if (values.headers !== undefined) this.headers = values.headers
     if (values.ttfb !== undefined) this.ttfb = values.ttfb
-    if (values.originalLength !== undefined) this.originalLength = values.originalLength
+    if (values.originalTransferSize !== undefined) this.originalTransferSize = values.originalTransferSize
+    if (values.originalResourceSize !== undefined) this.originalResourceSize = values.originalResourceSize
+    if (values.originalContentEncoding !== undefined) this.originalContentEncoding = values.originalContentEncoding
     if (values.originalDuration !== undefined) this.originalDuration = values.originalDuration
   }
 

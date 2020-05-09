@@ -4,7 +4,7 @@ import Path from 'path'
 const pp = new PlaybackProxy({
   cacheRoot: Path.join(__dirname, '../tmp'),
   port: 8080,
-  online: false,
+  mode: 'offline',
 })
 pp.start()
 

@@ -1,19 +1,20 @@
 {
-  "name": "my-ts-starter",
-  "version": "0.1.0",
+  "name": "http-playback-proxy",
+  "version": "0.2.0",
   "main": "dist/index.js",
   "description": "",
   "homepage": "https://www.ideamans.com/",
   "scripts": {
-    "test": "ava-ts -v test/**/test-*.ts",
-    "watch": "ava-ts -vw test/**/test-*.ts",
+    "test": "ava -v",
+    "watch": "ava -vw",
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "debug": "ts-node src/debug.ts"
   },
   "license": "MIT",
   "devDependencies": {
-    "@types/axios": "^0.14.0",
+    "@ava/typescript": "^1.1.1",
+    "@types/compression": "^1.7.0",
     "@types/get-port": "^4.2.0",
     "@types/http-server": "^0.10.0",
     "@types/js-levenshtein": "^1.1.0",
@@ -26,13 +27,23 @@
     "http-server": "^0.12.1",
     "request": "^2.88.2",
     "tmp-promise": "^2.0.2",
-    "ts-node": "^8.5.4",
+    "ts-node": "^8.10.1",
     "typescript": "^3.7.3"
   },
   "dependencies": {
     "@types/fs-extra": "^8.1.0",
+    "compression": "^1.7.4",
     "fs-extra": "^9.0.0",
     "http-mitm-proxy": "^0.8.2",
     "js-levenshtein": "^1.1.6"
+  },
+  "ava": {
+    "compileEnhancements": false,
+    "extensions": [
+      "ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ]
   }
 }
