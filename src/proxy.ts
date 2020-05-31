@@ -9,11 +9,14 @@ import { ServerResponse } from 'http'
 
 export type PlaybackProxyMode = 'online' | 'offline' | 'mixed'
 
+const DEFAULT_DATA_STORE = 'default'
+
 export class PlaybackProxy {
   static specFile = 'spec.json'
   cacheRoot: string = ''
   port: number = 8080
   mode: PlaybackProxyMode = 'online'
+  reproduceTtfb = true
   responseExtraHeaders = false
   proxy!: HttpMitmProxy.IProxy
   spec: Spec = new Spec()
@@ -22,6 +25,7 @@ export class PlaybackProxy {
     if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
     if (values.port !== undefined) this.port = values.port
     if (values.mode !== undefined) this.mode = values.mode
+    if (values.reproduceTtfb !== undefined) this.reproduceTtfb = values.reproduceTtfb
     if (values.responseExtraHeaders !== undefined) this.responseExtraHeaders = values.responseExtraHeaders
     this.proxy = HttpMitmProxy()
   }
@@ -61,10 +65,13 @@ export class PlaybackProxy {
     return Buffer.from('')
   }
 
-  dataFileStream(res: Resource): Stream.Readable {
+  dataFileStream(res: Resource, cascadings: string[] = []): Stream.Readable {
     if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, res.path)
-      return Fsx.createReadStream(path)
+      for (let cascade of cascadings.filter((c) => c !== '').concat(DEFAULT_DATA_STORE)) {
+        const path = Path.join(this.cacheRoot, cascade, res.path)
+        if (Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
+      }
+      throw new Error('data file not found')
     } else {
       throw new Error('requires cacheRoot')
     }
@@ -73,7 +80,7 @@ export class PlaybackProxy {
   async saveDataFile(res: Resource, buffer: Buffer) {
     if (buffer.length < 1) return
     if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, res.path)
+      const path = Path.join(this.cacheRoot, DEFAULT_DATA_STORE, res.path)
       await Fsx.ensureFile(path)
       await Fsx.writeFile(path, buffer)
     }
@@ -156,9 +163,11 @@ export class PlaybackProxy {
       }
 
       try {
-        let stream
+        const cascadingHeader = request.headers['x-proxy-cascade'] || ''
+        const cascadings: string[] = Array.isArray(cascadingHeader) ? cascadingHeader : cascadingHeader.split(/\s*,\s*/)
+        let stream: Stream.Readable
         try {
-          stream = this.dataFileStream(resource)
+          stream = this.dataFileStream(resource, cascadings)
         } catch (ex) {
           return ifNotFound(response)
         }

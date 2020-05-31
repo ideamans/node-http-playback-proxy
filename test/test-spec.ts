@@ -2,14 +2,14 @@ import { Resource, Spec } from '../src/spec'
 import anyTest, { TestInterface } from 'ava'
 const test = anyTest as TestInterface<{ mycontext: any }>
 
-test('About resource', (t) => {
+test('Resource path', (t) => {
   const res = new Resource({
     url: 'https://www.example.com/path/to/file?name=value',
   })
-  t.is(res.path, 'get/https/www.example.com/path/to/file/index~name=value.html', 'ファイルパスが自動で設定されること')
+  t.is(res.path, 'get/https/www.example.com/path/to/file/index~name=value.html')
 })
 
-test('SpecのResource管理について', (t) => {
+test('Resource in spec', (t) => {
   const sampleUrl = 'https://www.example.com/path/to/file?name=value'
   const spec = new Spec()
   t.is(spec.lookupResource('get', sampleUrl), undefined)

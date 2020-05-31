@@ -45,81 +45,111 @@ type SenarioOptions = {
 async function testProxySenario(t: ExecutionContext<MyProperties>, options: SenarioOptions = {}) {
   await t.context.proxy.start()
 
-  // Online
-  const onlineUrl = `http://localhost:${t.context.originPort}/index.html?name=value`
-  const resOnline = await t.context.axios.get(onlineUrl)
-  t.regex(resOnline.data, /the origin/, 'online proxy returns the origin.')
-  t.is(resOnline.headers['x-playback'], undefined, 'online proxy never returns x-playback header.')
-  if (options.testResponseHeader) await options.testResponseHeader(t, resOnline, 'online response header')
+  const targetUrl = `http://localhost:${t.context.originPort}/index.html?name=value`
 
-  await t.context.proxy.saveSpec()
-  t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got the first resource.')
+  // Online
+  await (async () => {
+    const resOnline = await t.context.axios.get(targetUrl)
+    t.regex(resOnline.data, /the origin/, 'online proxy returns the origin.')
+    t.is(resOnline.headers['x-playback'], undefined, 'online proxy never returns x-playback header.')
+    if (options.testResponseHeader) await options.testResponseHeader(t, resOnline, 'online response header')
+
+    await t.context.proxy.saveSpec()
+    t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got the first resource.')
+  })()
 
   // Offline
   t.context.proxy.mode = 'offline'
 
-  // Playback
-  const resPlayback = await t.context.axios.get(onlineUrl)
-  t.regex(resPlayback.data, /the origin/, 'offline proxy returns the same as the origin.')
-  t.is(resPlayback.headers['x-playback'], '1', 'offline proxy but returns x-playback header.')
-  if (options.testResponseHeader) await options.testResponseHeader(t, resOnline, 'playback response header')
+  await (async () => {
+    // Playback
+    const resPlayback = await t.context.axios.get(targetUrl)
+    t.regex(resPlayback.data, /the origin/, 'offline proxy returns the same as the origin.')
+    t.is(resPlayback.headers['x-playback'], '1', 'offline proxy but returns x-playback header.')
+    if (options.testResponseHeader) await options.testResponseHeader(t, resPlayback, 'playback response header')
 
-  // 404 from offline
-  await t.throwsAsync(
-    async () => {
-      const urlNotFound = `http://localhost:${t.context.originPort}/not-found.html`
-      await t.context.axios.get(urlNotFound)
-    },
-    /404/,
-    'offline proxy throws 404'
-  )
+    // 404 from offline
+    await t.throwsAsync(
+      async () => {
+        const urlNotFound = `http://localhost:${t.context.originPort}/not-found.html`
+        await t.context.axios.get(urlNotFound)
+      },
+      /404/,
+      'offline proxy throws 404'
+    )
 
-  await t.context.proxy.saveSpec()
-  t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got no resource.')
+    await t.context.proxy.saveSpec()
+    t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got no resource.')
+  })()
 
   // Slight change response
-  const similarUrl = `http://localhost:${t.context.originPort}/index.html?name=value1`
-  const resSimilar = await t.context.axios.get(similarUrl)
-  t.regex(resSimilar.data, /the origin/, 'offline proxy returns from similar url cache.')
-  t.is(resSimilar.headers['x-playback'], '1', 'offline proxy but returns x-playback header.')
+  await (async () => {
+    const similarUrl = `http://localhost:${t.context.originPort}/index.html?name=value1`
+    const resSimilar = await t.context.axios.get(similarUrl)
+    t.regex(resSimilar.data, /the origin/, 'offline proxy returns from similar url cache.')
+    t.is(resSimilar.headers['x-playback'], '1', 'offline proxy but returns x-playback header.')
 
-  if (options.testResponseHeader) await options.testResponseHeader(t, resSimilar, 'similar response header')
+    if (options.testResponseHeader) await options.testResponseHeader(t, resSimilar, 'similar response header')
 
-  await t.context.proxy.saveSpec()
-  t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got no resource.')
+    await t.context.proxy.saveSpec()
+    t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got no resource.')
+  })()
 
-  // modify cache contents
-  const cachePath = Path.join(t.context.tmpDir.path, 'get', 'http', `localhost~${t.context.originPort}`, 'index~name=value.html')
-  const cacheHtml = await Fsx.readFile(cachePath)
-  await Fsx.writeFile(cachePath, cacheHtml.toString().replace(/the origin/g, 'ORIGIN'))
-  const resOfflineChange = await t.context.axios.get(onlineUrl)
-  t.regex(resOfflineChange.data, /ORIGIN/, 'offline proxy returns modified content in cache')
-  t.is(resOfflineChange.headers['x-playback'], '1', 'offline proxy but returns x-playback header.')
-  if (options.testResponseHeader) await options.testResponseHeader(t, resOfflineChange, 'modified cache response header')
+  // content cascading
+  await (async () => {
+    const cascadedOriginalPath = Path.join(t.context.tmpDir.path, 'default', 'get', 'http', `localhost~${t.context.originPort}`, 'index~name=value.html')
+    const originalHtml = await Fsx.readFile(cascadedOriginalPath)
+    const cascadedPath = Path.join(t.context.tmpDir.path, 'cascade1', 'get', 'http', `localhost~${t.context.originPort}`, 'index~name=value.html')
+    await Fsx.ensureFile(cascadedPath)
+    await Fsx.writeFile(cascadedPath, originalHtml.toString().replace(/the origin/g, 'CASCADED'))
+
+    const resCascaded = await t.context.axios.get(targetUrl, { headers: { 'x-proxy-cascade': 'cascade2,cascade1' } })
+    t.regex(resCascaded.data, /CASCADED/, 'content cascaded')
+
+    const resNotCascaded = await t.context.axios.get(targetUrl)
+    t.notRegex(resNotCascaded.data, /CASCADED/, 'content not cascaded')
+  })()
+
+  await (async () => {
+    // modify cache contents
+    const cachePath = Path.join(t.context.tmpDir.path, 'default', 'get', 'http', `localhost~${t.context.originPort}`, 'index~name=value.html')
+    const cacheHtml = await Fsx.readFile(cachePath)
+    await Fsx.writeFile(cachePath, cacheHtml.toString().replace(/the origin/g, 'ORIGIN'))
+    const resOfflineChange = await t.context.axios.get(targetUrl)
+    t.regex(resOfflineChange.data, /ORIGIN/, 'offline proxy returns modified content in cache')
+    t.is(resOfflineChange.headers['x-playback'], '1', 'offline proxy but returns x-playback header.')
+    if (options.testResponseHeader) await options.testResponseHeader(t, resOfflineChange, 'modified cache response header')
+  })()
 
   // Mixed
   t.context.proxy.mode = 'mixed'
 
-  // mixed proxy returnes cache if exists
-  const resMixed = await t.context.axios.get(onlineUrl)
-  t.regex(resMixed.data, /ORIGIN/, 'mixied proxy returns cache if exists.')
-  t.is(resMixed.headers['x-playback'], '1', 'offline proxy but returns x-playback header.')
-  if (options.testResponseHeader) await options.testResponseHeader(t, resMixed, 'mixed response header')
+  await (async () => {
+    // mixed proxy returnes cache if exists
+    const resMixed = await t.context.axios.get(targetUrl)
+    t.regex(resMixed.data, /ORIGIN/, 'mixied proxy returns cache if exists.')
+    t.is(resMixed.headers['x-playback'], '1', 'offline proxy but returns x-playback header.')
+    if (options.testResponseHeader) await options.testResponseHeader(t, resMixed, 'mixed response header')
+  })()
 
-  // new request for mixed proxy
-  const mixedNewUrl = `http://localhost:${t.context.originPort}/index.html?longlonglonglonglonglonglonglonglonglong`
-  const resMixedNew = await t.context.axios.get(mixedNewUrl)
-  t.regex(resMixedNew.data, /the origin/, 'mixied proxy returns from origin about an another url.')
-  t.is(resMixedNew.headers['x-playback'], undefined, 'mixed proxy never returns x-playback header if the cache not exists.')
-  if (options.testResponseHeader) await options.testResponseHeader(t, resMixedNew, 'mixed new resource response header')
+  await (async () => {
+    // new request for mixed proxy
+    const mixedNewUrl = `http://localhost:${t.context.originPort}/index.html?longlonglonglonglonglonglonglonglonglong`
+    const resMixedNew = await t.context.axios.get(mixedNewUrl)
+    t.regex(resMixedNew.data, /the origin/, 'mixied proxy returns from origin about an another url.')
+    t.is(resMixedNew.headers['x-playback'], undefined, 'mixed proxy never returns x-playback header if the cache not exists.')
+    if (options.testResponseHeader) await options.testResponseHeader(t, resMixedNew, 'mixed new resource response header')
+  })()
 
-  // cache contents
-  const mixedCachePath = Path.join(t.context.tmpDir.path, 'get', 'http', `localhost~${t.context.originPort}`, 'index~longlonglonglonglonglonglonglonglonglong.html')
-  const mixedCache = await Fsx.readFile(mixedCachePath)
-  t.regex(mixedCache.toString(), /the origin/, 'cache created by mixed proxy and includes "the origin".')
+  await (async () => {
+    // cache contents
+    const mixedCachePath = Path.join(t.context.tmpDir.path, 'default', 'get', 'http', `localhost~${t.context.originPort}`, 'index~longlonglonglonglonglonglonglonglonglong.html')
+    const mixedCache = await Fsx.readFile(mixedCachePath)
+    t.regex(mixedCache.toString(), /the origin/, 'cache created by mixed proxy and includes "the origin".')
 
-  await t.context.proxy.saveSpec()
-  t.is(t.context.proxy.spec.resources.length, 2, 'mixed proxy spec got a new resource.')
+    await t.context.proxy.saveSpec()
+    t.is(t.context.proxy.spec.resources.length, 2, 'mixed proxy spec got a new resource.')
+  })()
 
   await t.context.proxy.stop()
 }

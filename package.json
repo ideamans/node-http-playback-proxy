@@ -1,6 +1,6 @@
 {
   "name": "http-playback-proxy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "main": "dist/index.js",
   "description": "",
   "homepage": "https://www.ideamans.com/",

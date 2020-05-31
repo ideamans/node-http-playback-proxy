@@ -2,7 +2,7 @@ import { ProxyUrl } from '../src/url'
 import anyTest, { TestInterface } from 'ava'
 const test = anyTest as TestInterface<{ mycontext: any }>
 
-test('URLのファイルパス化について', (t) => {
+test('URL pathnization', (t) => {
   const longparam = 'x'.repeat(1000)
   const shortparam = 'x'.repeat(246) // 256 - 9(image.jpg) - 1(~)
   t.is(new ProxyUrl('http://example.com').pathnize('get'), 'get/http/example.com/index.html')
