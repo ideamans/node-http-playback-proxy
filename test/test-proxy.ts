@@ -1,16 +1,18 @@
 import { PlaybackProxy } from '../src/proxy'
+import Http from 'http'
 import HttpServer from 'http-server'
 import Tmp from 'tmp-promise'
 import GetPort from 'get-port'
 import Path from 'path'
 import Axios, { AxiosInstance, AxiosResponse } from 'axios'
-import Request from 'request'
-import Https from 'https'
 import anyTest, { TestInterface, ExecutionContext } from 'ava'
 import Fsx from 'fs-extra'
 import Compression from 'compression'
 import { Server } from 'http'
 import { ok } from 'assert'
+import { LoremIpsum } from 'lorem-ipsum'
+import { Readable } from 'stream'
+import { Throttle } from 'stream-throttle'
 
 type MyProperties = {
   originPort: number
@@ -29,7 +31,7 @@ test.beforeEach(async (t) => {
   t.context.proxy = new PlaybackProxy({
     cacheRoot: t.context.tmpDir.path,
     port: t.context.proxyPort,
-    responseExtraHeaders: true,
+    responseDebugHeaders: true,
   })
 })
 
@@ -40,6 +42,7 @@ test.afterEach(async (t) => {
 
 type SenarioOptions = {
   testResponseHeader?: (t: ExecutionContext<MyProperties>, res: AxiosResponse, message: string) => Promise<void>
+  testOnline?: (t: ExecutionContext<MyProperties>, res: AxiosResponse, message: string) => Promise<void>
 }
 
 async function testProxySenario(t: ExecutionContext<MyProperties>, options: SenarioOptions = {}) {
@@ -56,6 +59,8 @@ async function testProxySenario(t: ExecutionContext<MyProperties>, options: Sena
 
     await t.context.proxy.saveSpec()
     t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got the first resource.')
+
+    if (options.testOnline) await options.testOnline(t, resOnline, 'test about online')
   })()
 
   // Offline
@@ -191,5 +196,66 @@ test('In gzip content-encoding', async (t) => {
       t.is(res.headers['x-origin-content-encoding'], 'gzip', message)
       t.is(res.headers['x-origin-transfer-size'], '105', message)
     },
+    testOnline: async (t, res, message) => {
+      const resource = t.context.proxy.spec.resources[0]
+      t.is(resource.originResourceSize, 115)
+      t.is(resource.originTransferSize, 105)
+    },
   })
+})
+
+test('TTFB', async (t) => {
+  t.context.originPort = await GetPort()
+  t.context.server = Http.createServer((req, res) => {
+    setTimeout(() => {
+      res.writeHead(200, { 'Content-Type': 'text/plain' })
+      res.write(new LoremIpsum().generateParagraphs(100))
+      res.end()
+    }, 500)
+  })
+  t.context.server.listen(t.context.originPort)
+
+  await t.context.proxy.start()
+  t.context.axios = Axios.create({
+    proxy: { host: 'localhost', port: t.context.proxyPort },
+  })
+
+  // Recording
+  await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+  t.context.proxy.mode = 'offline'
+
+  const started = +new Date()
+  const resProxy = await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+  const headerTtfb = parseInt(resProxy.headers['x-origin-ttfb'].toString())
+  const actualTime = +new Date() - started
+  t.true(Math.abs(headerTtfb - 500) < 100)
+  t.true(Math.abs(actualTime - 500) < 100)
+})
+
+test('Datarate', async (t) => {
+  const content = Buffer.from(new LoremIpsum().generateParagraphs(100))
+  const rate = content.length / 0.5
+  const chunksize = content.length / 10
+  t.context.originPort = await GetPort()
+  t.context.server = Http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    let st = Readable.from([content])
+    st = st.pipe(new Throttle({ rate, chunksize }))
+    st.pipe(res)
+  })
+  t.context.server.listen(t.context.originPort)
+
+  await t.context.proxy.start()
+  t.context.axios = Axios.create({
+    proxy: { host: 'localhost', port: t.context.proxyPort },
+  })
+
+  // Recording
+  await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+  t.context.proxy.mode = 'offline'
+
+  const started = +new Date()
+  await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+  const actualTime = +new Date() - started
+  t.true(Math.abs(actualTime - 500) < 100, 'Offline response time almost reproduces online datarate')
 })

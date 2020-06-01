@@ -6,6 +6,7 @@ import { ProxyUrl } from './url'
 import Zlib from 'zlib'
 import Stream from 'stream'
 import { ServerResponse } from 'http'
+import { Throttle } from 'stream-throttle'
 
 export type PlaybackProxyMode = 'online' | 'offline' | 'mixed'
 
@@ -14,19 +15,23 @@ const DEFAULT_DATA_STORE = 'default'
 export class PlaybackProxy {
   static specFile = 'spec.json'
   cacheRoot: string = ''
+  cascading: string[] = []
   port: number = 8080
   mode: PlaybackProxyMode = 'online'
-  reproduceTtfb = true
-  responseExtraHeaders = false
+  latencyGap = true
+  throttlingGap = 15
+  responseDebugHeaders = false
   proxy!: HttpMitmProxy.IProxy
   spec: Spec = new Spec()
 
   constructor(values: Partial<PlaybackProxy> = {}) {
     if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
+    if (values.cascading !== undefined) this.cascading = values.cascading
     if (values.port !== undefined) this.port = values.port
     if (values.mode !== undefined) this.mode = values.mode
-    if (values.reproduceTtfb !== undefined) this.reproduceTtfb = values.reproduceTtfb
-    if (values.responseExtraHeaders !== undefined) this.responseExtraHeaders = values.responseExtraHeaders
+    if (values.latencyGap !== undefined) this.latencyGap = values.latencyGap
+    if (values.throttlingGap !== undefined) this.throttlingGap = values.throttlingGap
+    if (values.responseDebugHeaders !== undefined) this.responseDebugHeaders = values.responseDebugHeaders
     this.proxy = HttpMitmProxy()
   }
 
@@ -65,11 +70,11 @@ export class PlaybackProxy {
     return Buffer.from('')
   }
 
-  dataFileStream(res: Resource, cascadings: string[] = []): Stream.Readable {
+  async dataFileStream(res: Resource, cascadings: string[] = []): Promise<Stream.Readable> {
     if (this.cacheRoot) {
-      for (let cascade of cascadings.filter((c) => c !== '').concat(DEFAULT_DATA_STORE)) {
+      for (let cascade of cascadings.concat(this.cascading, DEFAULT_DATA_STORE).filter((c) => c !== '')) {
         const path = Path.join(this.cacheRoot, cascade, res.path)
-        if (Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
+        if (await Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
       }
       throw new Error('data file not found')
     } else {
@@ -109,15 +114,14 @@ export class PlaybackProxy {
       resource.ttfb = downloadStarted - requestStarted
       const response = ctx.serverToProxyResponse
       resource.headers = Object.assign({}, response.headers)
-      resource.originalTransferSize = parseInt(response.headers['content-length'] || '0')
-      resource.originalContentEncoding = response.headers['content-encoding'] || ''
+      resource.originTransferSize = parseInt(response.headers['content-length'] || '0')
+      resource.originContentEncoding = response.headers['content-encoding'] || ''
 
-      if (this.responseExtraHeaders) {
-        response.headers['x-origin-content-encoding'] = resource.originalContentEncoding
-        response.headers['x-origin-transfer-size'] = resource.originalTransferSize.toString()
+      if (this.responseDebugHeaders) {
+        response.headers['x-origin-content-encoding'] = resource.originContentEncoding
+        response.headers['x-origin-transfer-size'] = resource.originTransferSize.toString()
       }
-      // console.log('request', fullUrl, ctx.proxyToServerRequest.getHeaders())
-      // console.log('response', fullUrl, resource.headers)
+
       cb()
     })
 
@@ -130,10 +134,11 @@ export class PlaybackProxy {
     })
     ctx.onResponseEnd((ctx, cb) => {
       const downloadFinished = +new Date()
-      resource.originalDuration = downloadFinished - downloadStarted
+      resource.originDuration = downloadFinished - downloadStarted
 
       const buffer = Buffer.concat(chunks)
-      resource.originalResourceSize = buffer.length
+      resource.originResourceSize = buffer.length
+      if (resource.originTransferSize <= 0) resource.originTransferSize = buffer.length
 
       this.saveDataFile(resource, buffer)
         .then(() => cb())
@@ -155,35 +160,53 @@ export class PlaybackProxy {
         response.setHeader(key, value)
       }
 
-      if (this.responseExtraHeaders) {
+      if (this.responseDebugHeaders) {
         response.setHeader('x-playback', '1')
-        response.setHeader('x-origin-content-encoding', resource.originalContentEncoding)
-        response.setHeader('x-origin-resource-size', resource.originalResourceSize.toString())
-        response.setHeader('x-origin-transfer-size', resource.originalTransferSize.toString())
+        response.setHeader('x-origin-content-encoding', resource.originContentEncoding)
+        response.setHeader('x-origin-resource-size', resource.originResourceSize.toString())
+        response.setHeader('x-origin-ttfb', resource.ttfb.toString())
+        response.setHeader('x-origin-transfer-duration', resource.originDuration.toString())
+        response.setHeader('x-origin-transfer-size', resource.originTransferSize.toString())
       }
 
-      try {
-        const cascadingHeader = request.headers['x-proxy-cascade'] || ''
-        const cascadings: string[] = Array.isArray(cascadingHeader) ? cascadingHeader : cascadingHeader.split(/\s*,\s*/)
-        let stream: Stream.Readable
+      const handler = () => {
         try {
-          stream = this.dataFileStream(resource, cascadings)
-        } catch (ex) {
-          return ifNotFound(response)
-        }
-        if (!stream) throw new Error('no stream')
+          const cascadingHeader = request.headers['x-proxy-cascade'] || ''
+          const cascadings: string[] = Array.isArray(cascadingHeader) ? cascadingHeader : cascadingHeader.split(/\s*,\s*/)
 
-        response.statusCode = 200
-        response.removeHeader('content-length')
-        if (response.getHeader('content-encoding') === 'gzip') {
-          const gzip = Zlib.createGzip()
-          stream.pipe(gzip).pipe(response)
-        } else {
-          stream.pipe(response)
+          this.dataFileStream(resource, cascadings)
+            .then((stream) => {
+              response.statusCode = 200
+              response.removeHeader('content-length')
+
+              let st = stream
+              if (response.getHeader('content-encoding') === 'gzip') {
+                const gzip = Zlib.createGzip()
+                st = stream.pipe(gzip)
+              } else {
+                st = stream
+              }
+
+              const rate = resource.originBytesPerSecond(-this.throttlingGap)
+              if (this.latencyGap && rate > 0) {
+                st = st.pipe(new Throttle({ rate, chunksize: 512 }))
+              }
+
+              st.pipe(response)
+            })
+            .catch((ex) => {
+              ifNotFound(response)
+            })
+        } catch (ex) {
+          response.statusCode = 500
+          response.end(ex.message)
         }
-      } catch (ex) {
-        response.statusCode = 500
-        response.end(ex.message)
+      }
+
+      if (this.latencyGap) {
+        setTimeout(handler, resource.ttfb - this.throttlingGap)
+      } else {
+        handler()
       }
     } else {
       return ifNotFound(response)

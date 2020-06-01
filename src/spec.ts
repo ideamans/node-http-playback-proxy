@@ -9,10 +9,10 @@ export class Resource {
   path: string = ''
   headers: HeadersType = {}
   ttfb: number = 0
-  originalResourceSize: number = 0
-  originalTransferSize: number = 0
-  originalContentEncoding: string = ''
-  originalDuration: number = 0
+  originResourceSize: number = 0
+  originTransferSize: number = 0
+  originContentEncoding: string = ''
+  originDuration: number = 0
 
   constructor(values: Partial<Resource> = {}) {
     if (values.url !== undefined) this.setUrl(values.url)
@@ -20,10 +20,10 @@ export class Resource {
     if (values.path !== undefined) this.path = values.path
     if (values.headers !== undefined) this.headers = values.headers
     if (values.ttfb !== undefined) this.ttfb = values.ttfb
-    if (values.originalTransferSize !== undefined) this.originalTransferSize = values.originalTransferSize
-    if (values.originalResourceSize !== undefined) this.originalResourceSize = values.originalResourceSize
-    if (values.originalContentEncoding !== undefined) this.originalContentEncoding = values.originalContentEncoding
-    if (values.originalDuration !== undefined) this.originalDuration = values.originalDuration
+    if (values.originTransferSize !== undefined) this.originTransferSize = values.originTransferSize
+    if (values.originResourceSize !== undefined) this.originResourceSize = values.originResourceSize
+    if (values.originContentEncoding !== undefined) this.originContentEncoding = values.originContentEncoding
+    if (values.originDuration !== undefined) this.originDuration = values.originDuration
   }
 
   get proxyUrl() {
@@ -34,6 +34,12 @@ export class Resource {
     this.url = url
     const u = new ProxyUrl(url)
     this.path = u.pathnize()
+  }
+
+  originBytesPerSecond(gap = 0) {
+    if (this.originDuration <= 0) return NaN
+    const seconds = (this.originDuration + gap) / 1000
+    return this.originTransferSize / seconds
   }
 }
 
