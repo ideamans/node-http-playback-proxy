@@ -18,8 +18,8 @@ export class PlaybackProxy {
   cascading: string[] = []
   port: number = 8080
   mode: PlaybackProxyMode = 'online'
-  latencyGap = true
-  throttlingGap = 15
+  throttling = true
+  latencyGap = 15
   responseDebugHeaders = false
   proxy!: HttpMitmProxy.IProxy
   spec: Spec = new Spec()
@@ -29,8 +29,8 @@ export class PlaybackProxy {
     if (values.cascading !== undefined) this.cascading = values.cascading
     if (values.port !== undefined) this.port = values.port
     if (values.mode !== undefined) this.mode = values.mode
+    if (values.throttling !== undefined) this.throttling = values.throttling
     if (values.latencyGap !== undefined) this.latencyGap = values.latencyGap
-    if (values.throttlingGap !== undefined) this.throttlingGap = values.throttlingGap
     if (values.responseDebugHeaders !== undefined) this.responseDebugHeaders = values.responseDebugHeaders
     this.proxy = HttpMitmProxy()
   }
@@ -187,8 +187,8 @@ export class PlaybackProxy {
                 st = stream
               }
 
-              const rate = resource.originBytesPerSecond(-this.throttlingGap)
-              if (this.latencyGap && rate > 0) {
+              const rate = resource.originBytesPerSecond(-this.latencyGap)
+              if (this.throttling && rate > 0) {
                 st = st.pipe(new Throttle({ rate, chunksize: 512 }))
               }
 
@@ -203,8 +203,8 @@ export class PlaybackProxy {
         }
       }
 
-      if (this.latencyGap) {
-        setTimeout(handler, resource.ttfb - this.throttlingGap)
+      if (this.throttling) {
+        setTimeout(handler, resource.ttfb - this.latencyGap)
       } else {
         handler()
       }
