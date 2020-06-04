@@ -58,7 +58,7 @@ async function testProxySenario(t: ExecutionContext<MyProperties>, options: Sena
     if (options.testResponseHeader) await options.testResponseHeader(t, resOnline, 'online response header')
 
     await t.context.proxy.saveSpec()
-    t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got the first resource.')
+    t.is(t.context.proxy.spec.resourcesLength, 1, 'offline proxy spec got the first resource.')
 
     if (options.testOnline) await options.testOnline(t, resOnline, 'test about online')
   })()
@@ -84,7 +84,7 @@ async function testProxySenario(t: ExecutionContext<MyProperties>, options: Sena
     )
 
     await t.context.proxy.saveSpec()
-    t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got no resource.')
+    t.is(t.context.proxy.spec.resourcesLength, 1, 'offline proxy spec got no resource.')
   })()
 
   // Slight change response
@@ -97,7 +97,7 @@ async function testProxySenario(t: ExecutionContext<MyProperties>, options: Sena
     if (options.testResponseHeader) await options.testResponseHeader(t, resSimilar, 'similar response header')
 
     await t.context.proxy.saveSpec()
-    t.is(t.context.proxy.spec.resources.length, 1, 'offline proxy spec got no resource.')
+    t.is(t.context.proxy.spec.resourcesLength, 1, 'offline proxy spec got no resource.')
   })()
 
   // content cascading
@@ -153,7 +153,7 @@ async function testProxySenario(t: ExecutionContext<MyProperties>, options: Sena
     t.regex(mixedCache.toString(), /the origin/, 'cache created by mixed proxy and includes "the origin".')
 
     await t.context.proxy.saveSpec()
-    t.is(t.context.proxy.spec.resources.length, 2, 'mixed proxy spec got a new resource.')
+    t.is(t.context.proxy.spec.resourcesLength, 2, 'mixed proxy spec got a new resource.')
   })()
 
   await t.context.proxy.stop()
@@ -197,7 +197,7 @@ test('In gzip content-encoding', async (t) => {
       t.is(res.headers['x-origin-transfer-size'], '105', message)
     },
     testOnline: async (t, res, message) => {
-      const resource = t.context.proxy.spec.resources[0]
+      const resource = t.context.proxy.spec.getResource(0)
       t.is(resource.originResourceSize, 115)
       t.is(resource.originTransferSize, 105)
     },

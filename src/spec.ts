@@ -1,5 +1,6 @@
 import { ProxyUrl } from './url'
 import Levenshtein from 'js-levenshtein'
+import Path from 'path'
 
 export type HeadersType = { [prop: string]: any }
 
@@ -13,6 +14,7 @@ export class Resource {
   originTransferSize: number = 0
   originContentEncoding: string = ''
   originDuration: number = 0
+  timestamp: number = +new Date()
 
   constructor(values: Partial<Resource> = {}) {
     if (values.url !== undefined) this.setUrl(values.url)
@@ -24,6 +26,7 @@ export class Resource {
     if (values.originResourceSize !== undefined) this.originResourceSize = values.originResourceSize
     if (values.originContentEncoding !== undefined) this.originContentEncoding = values.originContentEncoding
     if (values.originDuration !== undefined) this.originDuration = values.originDuration
+    if (values.timestamp !== undefined) this.timestamp = values.timestamp
   }
 
   get proxyUrl() {
@@ -47,6 +50,8 @@ export class ResourceTag {
   resource!: Resource
   host: string = ''
   path: string = ''
+  extname: string = ''
+  mimeType: string = ''
   lastMatching: number = 0
 
   constructor(res: Resource) {
@@ -54,6 +59,12 @@ export class ResourceTag {
     const url = res.proxyUrl
     this.host = url.host
     this.path = url.pathname + url.search || '/'
+
+    const b = Path.basename(url.pathname)
+    this.extname = Path.extname(b).toLowerCase()
+
+    const ct = res.headers['content-type'] || ''
+    this.mimeType = (Array.isArray(ct) ? ct.shift() : ct).split(';').shift().toLowerCase()
   }
 
   updateMatching(that: ResourceTag) {
@@ -74,12 +85,14 @@ export class ResourceTag {
 export type ResourceIndex = { [method: string]: { [url: string]: Resource } }
 export type ResourceGroup = { [group: string]: Resource[] }
 
+export type ResourceFilterCallback = (tag: ResourceTag, res: Resource) => boolean
+
 export class Spec {
-  resources: Resource[] = []
+  private resources: Resource[] = []
   resourcesIndex: ResourceIndex = {}
   resourcesTags: ResourceTag[] = []
 
-  constructor(values: Partial<Spec> = {}) {
+  constructor(values: Partial<Spec> & { resources?: Array<Partial<Resource>> } = {}) {
     if (values.resources) this.resources = values.resources.map((r) => new Resource(r))
     this.reIndex()
   }
@@ -88,6 +101,14 @@ export class Spec {
     return JSON.stringify({
       resources: this.resources,
     })
+  }
+
+  get resourcesLength() {
+    return this.resources.length
+  }
+
+  getResource(index: number) {
+    return this.resources[index]
   }
 
   putResource(res: Resource) {
@@ -134,5 +155,13 @@ export class Spec {
     const sorted = this.resourcesTags.filter((t) => t.lastMatching > 0).sort((a, b) => b.lastMatching - a.lastMatching)
     const nearest = sorted.shift()
     if (nearest) return nearest.resource
+  }
+
+  filterResources(cb: ResourceFilterCallback, orderAsc = true) {
+    return this.resourcesTags
+      .filter((tag) => cb(tag, tag.resource))
+      .map((tag) => tag.resource)
+
+      .sort((a, b) => (orderAsc ? a.timestamp - b.timestamp : b.timestamp - a.timestamp))
   }
 }
