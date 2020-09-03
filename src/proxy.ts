@@ -1,10 +1,10 @@
 import HttpMitmProxy from 'http-mitm-proxy'
-import Fsx from 'fs-extra'
+import Fsx, { createReadStream } from 'fs-extra'
 import Path from 'path'
 import { Spec, Resource } from './spec'
 import { ProxyUrl } from './url'
 import Zlib from 'zlib'
-import Stream from 'stream'
+import Stream, { Writable, Readable } from 'stream'
 import { ServerResponse } from 'http'
 import { Throttle } from 'stream-throttle'
 
@@ -19,7 +19,7 @@ export class PlaybackProxy {
   port: number = 8080
   mode: PlaybackProxyMode = 'online'
   throttling = true
-  latencyGap = 15
+  latencyGap = 0
   responseDebugHeaders = false
   proxy!: HttpMitmProxy.IProxy
   spec: Spec = new Spec()
@@ -187,7 +187,7 @@ export class PlaybackProxy {
                 st = stream
               }
 
-              const rate = resource.originBytesPerSecond(-this.latencyGap)
+              const rate = resource.originBytesPerSecond(this.latencyGap)
               if (this.throttling && rate > 0) {
                 st = st.pipe(new Throttle({ rate, chunksize: 512 }))
               }
@@ -204,7 +204,7 @@ export class PlaybackProxy {
       }
 
       if (this.throttling) {
-        setTimeout(handler, resource.ttfb - this.latencyGap)
+        setTimeout(handler, resource.ttfb + this.latencyGap)
       } else {
         handler()
       }

@@ -6,6 +6,7 @@
   "description": "",
   "homepage": "https://www.ideamans.com/",
   "scripts": {
+    "w": "ava -vws test/test-proxy.ts",
     "test": "ava -v",
     "watch": "ava -vw",
     "build": "tsc",
