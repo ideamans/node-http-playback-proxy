@@ -4,7 +4,7 @@ import Path from 'path'
 import { Spec, Resource } from './spec'
 import { ProxyUrl } from './url'
 import Zlib from 'zlib'
-import Stream, { Writable, Readable } from 'stream'
+import Stream, { Transform, TransformCallback } from 'stream'
 import { ServerResponse } from 'http'
 import { Throttle } from 'stream-throttle'
 
@@ -109,6 +109,17 @@ export class PlaybackProxy {
     }
 
     const chunks: Buffer[] = []
+
+    // Measure transfer size
+    let transferSize = 0
+    const counter = new Transform({
+      transform(chunk: string | Buffer, _: string, done: TransformCallback): void {
+        transferSize += chunk.length
+        this.push(chunk)
+        done()
+      },
+    })
+
     ctx.onResponse((ctx, cb) => {
       downloadStarted = +new Date()
       resource.ttfb = downloadStarted - requestStarted
@@ -121,6 +132,8 @@ export class PlaybackProxy {
         response.headers['x-origin-content-encoding'] = resource.originContentEncoding
         response.headers['x-origin-transfer-size'] = resource.originTransferSize.toString()
       }
+
+      ctx.addResponseFilter(counter)
 
       cb()
     })
@@ -138,6 +151,7 @@ export class PlaybackProxy {
 
       const buffer = Buffer.concat(chunks)
       resource.originResourceSize = buffer.length
+      resource.originTransferSize = transferSize
       if (resource.originTransferSize <= 0) resource.originTransferSize = buffer.length
 
       this.saveDataFile(resource, buffer)

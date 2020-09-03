@@ -1,12 +1,12 @@
 {
   "name": "http-playback-proxy",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "main": "dist/index.js",
   "bin": "dist/command.js",
   "description": "",
   "homepage": "https://www.ideamans.com/",
   "scripts": {
-    "w": "ava -vws test/test-proxy.ts",
+    "w": "ava -vws test/test-reproducibility.ts",
     "test": "ava -v",
     "watch": "ava -vw",
     "build": "tsc",
