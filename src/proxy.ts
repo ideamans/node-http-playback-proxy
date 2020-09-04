@@ -12,6 +12,10 @@ export type PlaybackProxyMode = 'online' | 'offline' | 'mixed'
 
 const DEFAULT_DATA_STORE = 'default'
 
+function hrtimeToMs(hrtime: [number, number]) {
+  return hrtime[0] * 1000 + hrtime[1] / 1e6
+}
+
 export class PlaybackProxy {
   static specFile = 'spec.json'
   cacheRoot: string = ''
@@ -99,7 +103,7 @@ export class PlaybackProxy {
       method: clientRequest.method,
       url: fullUrl,
     })
-    const requestStarted = +new Date()
+    const requestStarted = process.hrtime()
     let downloadStarted = requestStarted
 
     let encoding = clientRequest.headers['accept-encoding']
@@ -121,8 +125,8 @@ export class PlaybackProxy {
     })
 
     ctx.onResponse((ctx, cb) => {
-      downloadStarted = +new Date()
-      resource.ttfb = downloadStarted - requestStarted
+      resource.ttfb = hrtimeToMs(process.hrtime(requestStarted))
+      downloadStarted = process.hrtime()
       const response = ctx.serverToProxyResponse
       resource.headers = Object.assign({}, response.headers)
       resource.originTransferSize = parseInt(response.headers['content-length'] || '0')
@@ -146,8 +150,7 @@ export class PlaybackProxy {
       cb(undefined, chunk)
     })
     ctx.onResponseEnd((ctx, cb) => {
-      const downloadFinished = +new Date()
-      resource.originDuration = downloadFinished - downloadStarted
+      resource.originDuration = hrtimeToMs(process.hrtime(downloadStarted))
 
       const buffer = Buffer.concat(chunks)
       resource.originResourceSize = buffer.length
