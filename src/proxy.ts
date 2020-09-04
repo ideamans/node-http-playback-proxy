@@ -104,7 +104,6 @@ export class PlaybackProxy {
       url: fullUrl,
     })
     const requestStarted = process.hrtime()
-    let downloadStarted = requestStarted
 
     let encoding = clientRequest.headers['accept-encoding']
     if (encoding) {
@@ -126,7 +125,6 @@ export class PlaybackProxy {
 
     ctx.onResponse((ctx, cb) => {
       resource.ttfb = hrtimeToMs(process.hrtime(requestStarted))
-      downloadStarted = process.hrtime()
       const response = ctx.serverToProxyResponse
       resource.headers = Object.assign({}, response.headers)
       resource.originTransferSize = parseInt(response.headers['content-length'] || '0')
@@ -150,7 +148,7 @@ export class PlaybackProxy {
       cb(undefined, chunk)
     })
     ctx.onResponseEnd((ctx, cb) => {
-      resource.originDuration = hrtimeToMs(process.hrtime(downloadStarted))
+      resource.originDuration = hrtimeToMs(process.hrtime(requestStarted)) - resource.ttfb
 
       const buffer = Buffer.concat(chunks)
       resource.originResourceSize = buffer.length
