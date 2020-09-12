@@ -63,7 +63,7 @@ export class PlaybackProxy {
 
   async loadDataFile(res: Resource) {
     if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, res.path)
+      const path = Path.join(this.cacheRoot, DEFAULT_DATA_STORE, res.path)
       try {
         const buffer = await Fsx.readFile(path)
         return buffer

@@ -1,6 +1,6 @@
 {
   "name": "http-playback-proxy",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "main": "dist/index.js",
   "bin": "dist/command.js",
   "description": "",
