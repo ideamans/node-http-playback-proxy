@@ -254,8 +254,38 @@ test('Datarate', async (t) => {
   await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
   t.context.proxy.mode = 'offline'
 
-  const started = +new Date()
-  await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
-  const actualTime = +new Date() - started
-  t.true(Math.abs(actualTime - 500) < 100, 'Offline response time almost reproduces online datarate')
+  // Natural speed
+  await (async () => {
+    const started = +new Date()
+    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    const actualTime = +new Date() - started
+    t.true(Math.abs(actualTime - 500) < 100, 'Offline response time almost reproduces online datarate')
+  })()
+
+  // Fast
+  await (async () => {
+    t.context.proxy.speed = 2.0
+    const started = +new Date()
+    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    const actualTime = +new Date() - started
+    t.true(Math.abs(actualTime - 250) < 100, 'Offline response time almost reproduces online datarate x2 fast')
+  })()
+
+  // Slow
+  await (async () => {
+    t.context.proxy.speed = 0.5
+    const started = +new Date()
+    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    const actualTime = +new Date() - started
+    t.true(Math.abs(actualTime - 1000) < 100, 'Offline response time almost reproduces online datarate x2 slow')
+  })()
+
+  // No throttling
+  await (async () => {
+    t.context.proxy.throttling = false
+    const started = +new Date()
+    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    const actualTime = +new Date() - started
+    t.true(Math.abs(actualTime - 100) < 100, 'Offline response time almost reproduces online datarate x2 slow')
+  })()
 })

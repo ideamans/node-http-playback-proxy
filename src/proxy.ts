@@ -27,6 +27,7 @@ export class PlaybackProxy {
   responseDebugHeaders = false
   proxy!: HttpMitmProxy.IProxy
   spec: Spec = new Spec()
+  speed: number = 1.0
 
   constructor(values: Partial<PlaybackProxy> = {}) {
     if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
@@ -36,6 +37,7 @@ export class PlaybackProxy {
     if (values.throttling !== undefined) this.throttling = values.throttling
     if (values.latencyGap !== undefined) this.latencyGap = values.latencyGap
     if (values.responseDebugHeaders !== undefined) this.responseDebugHeaders = values.responseDebugHeaders
+    if (values.speed !== undefined) this.speed = values.speed
     this.proxy = HttpMitmProxy()
   }
 
@@ -204,7 +206,7 @@ export class PlaybackProxy {
 
               const rate = resource.originBytesPerSecond(this.latencyGap)
               if (this.throttling && rate > 0) {
-                st = st.pipe(new Throttle({ rate, chunksize: 512 }))
+                st = st.pipe(new Throttle({ rate: rate * this.speed, chunksize: 512 }))
               }
 
               st.pipe(response)
@@ -219,7 +221,7 @@ export class PlaybackProxy {
       }
 
       if (this.throttling) {
-        setTimeout(handler, resource.ttfb + this.latencyGap)
+        setTimeout(handler, (resource.ttfb + this.latencyGap) / this.speed)
       } else {
         handler()
       }
