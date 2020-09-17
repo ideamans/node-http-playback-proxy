@@ -174,7 +174,13 @@ export class PlaybackProxy {
     const fullUrl = [ctx.isSSL ? 'https' : 'http', '://', request.headers.host || '', request.url].join('')
 
     const response = ctx.proxyToClientResponse
-    const resource = this.mode == 'offline' ? this.spec.findNearestResource(request.method || 'get', fullUrl) : this.spec.lookupResource(request.method || 'get', fullUrl)
+    const resource = this.mode == 'offline' ? (
+      // offline: best efort: lookup then nearest
+      this.spec.lookupResource(request.method || 'get', fullUrl) || this.spec.findNearestResource(request.method || 'get', fullUrl)
+    ) : (
+      // mixed: lookup only
+      this.spec.lookupResource(request.method || 'get', fullUrl)
+    )
     if (resource) {
       ctx.use(HttpMitmProxy.gunzip)
 
