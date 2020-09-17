@@ -28,6 +28,7 @@ export class PlaybackProxy {
   proxy!: HttpMitmProxy.IProxy
   spec: Spec = new Spec()
   speed: number = 1.0
+  sslCaDir: string = ''
 
   constructor(values: Partial<PlaybackProxy> = {}) {
     if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
@@ -38,6 +39,7 @@ export class PlaybackProxy {
     if (values.latencyGap !== undefined) this.latencyGap = values.latencyGap
     if (values.responseDebugHeaders !== undefined) this.responseDebugHeaders = values.responseDebugHeaders
     if (values.speed !== undefined) this.speed = values.speed
+    if (values.sslCaDir !== undefined) this.sslCaDir = values.sslCaDir
     this.proxy = HttpMitmProxy()
   }
 
@@ -129,6 +131,10 @@ export class PlaybackProxy {
       resource.ttfb = hrtimeToMs(process.hrtime(requestStarted))
       const response = ctx.serverToProxyResponse
       resource.headers = Object.assign({}, response.headers)
+
+      // transfer-encoding: chunk not needed
+      delete resource.headers['transfer-encoding']
+
       resource.originTransferSize = parseInt(response.headers['content-length'] || '0')
       resource.originContentEncoding = response.headers['content-encoding'] || ''
 
@@ -168,7 +174,7 @@ export class PlaybackProxy {
     const fullUrl = [ctx.isSSL ? 'https' : 'http', '://', request.headers.host || '', request.url].join('')
 
     const response = ctx.proxyToClientResponse
-    const resource = this.spec.findNearestResource(request.method || 'get', fullUrl)
+    const resource = this.mode == 'offline' ? this.spec.findNearestResource(request.method || 'get', fullUrl) : this.spec.lookupResource(request.method || 'get', fullUrl)
     if (resource) {
       ctx.use(HttpMitmProxy.gunzip)
 
@@ -251,7 +257,9 @@ export class PlaybackProxy {
     })
 
     await new Promise((resolve, reject) => {
-      this.proxy.listen({ port: this.port }, (err: any) => {
+      const options: HttpMitmProxy.IProxyOptions = { port: this.port }
+      if (this.sslCaDir) options.sslCaDir = this.sslCaDir
+      this.proxy.listen(options, (err: any) => {
         if (err) reject(err)
         resolve()
       })

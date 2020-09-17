@@ -15,6 +15,7 @@ Yargs.usage(`Usage: $0 -l "stdio" -d "exec {programPath: '/path/to/listener.sh'}
   .option('latency-gap', { descritpion: 'Assumed millisecond gap of this proxy.', number: true, default: 15 })
   .option('debug-headers', { alias: 'd', description: 'Returns debug information in response headers.', boolean: true, default: false })
   .option('auto-save', { description: 'Auto save each N seconds.', number: true, default: 5 })
+  .option('ssl-ca-dir', { description: 'Use the-dir/cert/ca.pem for SSL.', string: true, default: '' })
   .command(
     '*',
     'Starts playback proxy',
@@ -29,9 +30,10 @@ Yargs.usage(`Usage: $0 -l "stdio" -d "exec {programPath: '/path/to/listener.sh'}
         mode: argv.mode as PlaybackProxyMode,
         throttling: !argv.noThrottling,
         responseDebugHeaders: !!argv.debugHeaders,
+        sslCaDir: argv.sslCaDir as string,
       })
 
-      proxy.start()
+      await proxy.start()
 
       console.log(`Playback proxy started on ${proxy.cacheRoot} as http://localhost:${proxy.port}`)
 
