@@ -25,7 +25,7 @@ export class PlaybackProxy {
   throttling = true
   latencyGap = 0
   responseDebugHeaders = false
-  proxy!: HttpMitmProxy.IProxy
+  proxy?: HttpMitmProxy.IProxy
   spec: Spec = new Spec()
   speed: number = 1.0
   sslCaDir: string = ''
@@ -40,7 +40,6 @@ export class PlaybackProxy {
     if (values.responseDebugHeaders !== undefined) this.responseDebugHeaders = values.responseDebugHeaders
     if (values.speed !== undefined) this.speed = values.speed
     if (values.sslCaDir !== undefined) this.sslCaDir = values.sslCaDir
-    this.proxy = HttpMitmProxy()
   }
 
   specFilePath() {
@@ -244,6 +243,7 @@ export class PlaybackProxy {
 
   async start() {
     await this.loadSpec()
+    this.proxy = HttpMitmProxy()
 
     this.proxy.onRequest((ctx, cb) => {
       if (this.mode == 'online') {
@@ -265,6 +265,8 @@ export class PlaybackProxy {
     await new Promise((resolve, reject) => {
       const options: HttpMitmProxy.IProxyOptions = { port: this.port }
       if (this.sslCaDir) options.sslCaDir = this.sslCaDir
+      if (!this.proxy) throw new Error('proxy not created')
+
       this.proxy.listen(options, (err: any) => {
         if (err) reject(err)
         resolve()
@@ -273,7 +275,7 @@ export class PlaybackProxy {
   }
 
   async stop() {
-    await this.proxy.close()
+    if (this.proxy) await this.proxy.close()
     await this.saveSpec()
   }
 }
