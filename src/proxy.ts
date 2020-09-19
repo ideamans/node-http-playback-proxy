@@ -174,7 +174,7 @@ export class PlaybackProxy {
     const response = ctx.proxyToClientResponse
     const resource = this.mode == 'offline' ? (
       // offline: best efort: lookup then nearest
-      this.spec.lookupResource(request.method || 'get', fullUrl) || this.spec.findNearestResource(request.method || 'get', fullUrl)
+      this.spec.findNearestResource(request.method || 'get', fullUrl)
     ) : (
       // mixed: lookup only
       this.spec.lookupResource(request.method || 'get', fullUrl)
