@@ -20,6 +20,9 @@ export class PlaybackProxy {
   cacheRoot: string = ''
   cascading: string[] = []
   port: number = 8080
+  host: string = 'localhost'
+  keepAlive: boolean = false
+  proxyTimeout: number = 0
   mode: PlaybackProxyMode = 'online'
   throttling = true
   latencyGap = 0
@@ -33,6 +36,9 @@ export class PlaybackProxy {
     if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
     if (values.cascading !== undefined) this.cascading = values.cascading
     if (values.port !== undefined) this.port = values.port
+    if (values.host !== undefined) this.host = values.host
+    if (values.keepAlive !== undefined) this.keepAlive = values.keepAlive
+    if (values.proxyTimeout !== undefined) this.proxyTimeout = values.proxyTimeout
     if (values.mode !== undefined) this.mode = values.mode
     if (values.throttling !== undefined) this.throttling = values.throttling
     if (values.latencyGap !== undefined) this.latencyGap = values.latencyGap
@@ -262,7 +268,12 @@ export class PlaybackProxy {
     })
 
     await new Promise((resolve, reject) => {
-      const options: HttpMitmProxy.IProxyOptions = { port: this.port }
+      const options: HttpMitmProxy.IProxyOptions = {
+        port: this.port,
+        host: this.host,
+        keepAlive: this.keepAlive,
+        timeout: this.proxyTimeout,
+      }
       if (this.sslCaDir) options.sslCaDir = this.sslCaDir
       if (!this.proxy) throw new Error('proxy not created')
 
