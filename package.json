@@ -1,6 +1,6 @@
 {
   "name": "http-playback-proxy",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "main": "dist/index.js",
   "bin": "dist/command.js",
   "description": "",
@@ -43,7 +43,6 @@
     "fs-extra": "^9.0.0",
     "get-port": "^5.1.1",
     "http-mitm-proxy": "^0.8.2",
-    "js-levenshtein": "^1.1.6",
     "stream-throttle": "^0.1.3",
     "yargs": "^15.3.1"
   },

@@ -22,20 +22,34 @@ test('ResourceTag extname and mimeType', (t) => {
 })
 
 test('Resource in spec', (t) => {
-  const sampleUrl = 'https://www.example.com/path/to/file?name=value'
   const spec = new Spec()
-  t.is(spec.lookupResource('get', sampleUrl), undefined)
+  const sampleUrl1 = 'https://www.example.com/path/to/file?name1=value1&name2=value2'
+  const sampleUrl2 = 'https://www.example.com/path/to/file?name1=value1&name2=value2&name3=value3'
 
-  const res = spec.newResource({ method: 'get', url: sampleUrl })
+  t.is(spec.lookupResource('get', sampleUrl1), undefined)
+
+  const res1 = spec.newResource({ method: 'get', url: sampleUrl1 })
   t.is(spec.resourcesLength, 1)
-  t.is(spec.resourcesIndex['get'][sampleUrl].url, sampleUrl)
-  t.is(spec.lookupResource('get', sampleUrl).url, sampleUrl)
+  t.is(spec.resourcesIndex['get'][sampleUrl1].url, sampleUrl1)
+  t.is(spec.lookupResource('get', sampleUrl1).url, sampleUrl1)
 
-  t.is(spec.findNearestResource('post', sampleUrl), undefined)
-  t.is(spec.findNearestResource('get', 'https://example.com/path/to/file?name=value'), undefined)
-  const nearest = spec.findNearestResource('get', 'https://www.example.com/path/to/file?name=VALUE')
-  t.truthy(nearest)
-  if (nearest) t.is(nearest.url, sampleUrl)
+  t.is(spec.findNearestResource('post', sampleUrl1), undefined)
+  t.is(spec.findNearestResource('get', 'http://www.example.com/path/to/file?name1=value1&name2=value2'), undefined)
+  t.is(spec.findNearestResource('get', 'https://example.com/path/to/file?name1=value1&name2=value2'), undefined)
+  t.is(spec.findNearestResource('get', 'https://www.example.com/path/to/unmatch?name1=value1&name2=value2'), undefined)
+
+  const nearest1 = spec.findNearestResource('get', 'https://www.example.com/path/to/file')
+  t.truthy(nearest1)
+  if (nearest1) t.is(nearest1.url, sampleUrl1)
+
+  const nearest2 = spec.findNearestResource('get', 'https://www.example.com/path/to/file?name1=value1&name2=value2&name3=value3')
+  t.truthy(nearest2)
+  if (nearest2) t.is(nearest2.url, sampleUrl1)
+
+  const res2 = spec.newResource({ method: 'get', url: sampleUrl2})
+  const nearest3 = spec.findNearestResource('get', 'https://www.example.com/path/to/file?name1=value1&name2=value2&name3=value3&name4=value4')
+  t.truthy(nearest3)
+  if (nearest3) t.is(nearest3.url, sampleUrl2)
 })
 
 test('Filter resources', (t) => {
