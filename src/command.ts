@@ -39,7 +39,7 @@ Yargs.usage(`Usage: $0 -l "stdio" -d "exec {programPath: '/path/to/listener.sh'}
 
       const autoSave = setInterval(() => {
         proxy.saveSpec()
-      })
+      }, 5 * 1000)
 
       process.on('SIGINT', () => {
         clearInterval(autoSave)
