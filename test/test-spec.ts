@@ -3,10 +3,23 @@ import anyTest, { TestInterface } from 'ava'
 const test = anyTest as TestInterface<{ mycontext: any }>
 
 test('Resource path', (t) => {
-  const res = new Resource({
+  const get = new Resource({
+    method: 'GET',
     url: 'https://www.example.com/path/to/file?name=value',
   })
-  t.is(res.path, 'get/https/www.example.com/path/to/file/index~name=value.html')
+  t.is(get.path, 'get/https/www.example.com/path/to/file/index~name=value.html')
+
+  const head = new Resource({
+    method: 'HEAD',
+    url: 'https://www.example.com/path/to/file?name=value',
+  })
+  t.is(head.path, 'head/https/www.example.com/path/to/file/index~name=value.html')
+
+  const post = new Resource({
+    method: 'POST',
+    url: 'https://www.example.com/path/to/file?name=value',
+  })
+  t.is(post.path, 'post/https/www.example.com/path/to/file/index~name=value.html')
 })
 
 test('ResourceTag extname and mimeType', (t) => {

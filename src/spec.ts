@@ -17,8 +17,8 @@ export class Resource {
   timestamp: number = +new Date()
 
   constructor(values: Partial<Resource> = {}) {
-    if (values.url !== undefined) this.setUrl(values.url)
     if (values.method !== undefined) this.method = values.method
+    if (values.url !== undefined) this.url = values.url
     if (values.path !== undefined) this.path = values.path
     if (values.headers !== undefined) this.headers = values.headers
     if (values.ttfb !== undefined) this.ttfb = values.ttfb
@@ -27,16 +27,15 @@ export class Resource {
     if (values.originContentEncoding !== undefined) this.originContentEncoding = values.originContentEncoding
     if (values.originDuration !== undefined) this.originDuration = values.originDuration
     if (values.timestamp !== undefined) this.timestamp = values.timestamp
+
+    if (!this.path) {
+      const u = new ProxyUrl(this.url)
+      this.path = u.pathnize(this.method.toLowerCase())
+    }
   }
 
   get proxyUrl() {
     return new ProxyUrl(this.url)
-  }
-
-  setUrl(url: string) {
-    this.url = url
-    const u = new ProxyUrl(url)
-    this.path = u.pathnize()
   }
 
   originBytesPerSecond(gap = 0) {
