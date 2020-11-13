@@ -15,7 +15,7 @@ test('URL pathnization', (t) => {
   t.is(new ProxyUrl('http://example.com/path/to/').pathnize('get'), 'get/http/example.com/path/to/index.html')
   t.is(new ProxyUrl('http://example.com/path/to/image.jpg').pathnize('get'), 'get/http/example.com/path/to/image.jpg')
   t.is(new ProxyUrl('http://example.com/path/to/image.jpg').pathnize('get'), 'get/http/example.com/path/to/image.jpg')
-  t.is(new ProxyUrl(`http://example.com/path/to/image.jpg?${longparam}`).pathnize('get'), `get/http/example.com/path/to/image~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_4f135939.jpg`)
+  t.is(new ProxyUrl(`http://example.com/path/to/image.jpg?${longparam}`).pathnize('get'), `get/http/example.com/path/to/image~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_a662ce40.jpg`)
 })
 
 test('QueryString distance', (t) => {

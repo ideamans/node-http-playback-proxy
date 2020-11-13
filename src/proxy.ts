@@ -87,9 +87,8 @@ export class PlaybackProxy {
       for (let cascade of cascadings.concat(this.cascading, DEFAULT_DATA_STORE).filter((c) => c !== '')) {
         const path = Path.join(this.cacheRoot, cascade, res.path)
         if (await Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
-        else return
       }
-      throw new Error('data file not found')
+      return
     } else {
       throw new Error('requires cacheRoot')
     }
