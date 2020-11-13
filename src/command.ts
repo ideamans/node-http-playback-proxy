@@ -8,6 +8,7 @@ const Package = require('../package.json')
 Yargs.usage(`Usage: $0 -l "stdio" -d "exec {programPath: '/path/to/listener.sh'}"`)
   .version(Package.version, 'version')
   .option('root', { alias: 'r', description: 'Cache root directory.', default: './' })
+  .option('host', { alias: 'h', description: 'Hostname of proxy.', default: 'localhost' })
   .option('port', { alias: 'p', description: 'Proxy port. Assign unused port if 0.', default: 0 })
   .option('mode', { alias: 'm', description: 'Mode: online, offline or mixed.', choices: ['mixed', 'online', 'offline'], default: 'mixed' })
   .option('no-throttling', { alias: 'T', description: 'Disable resource TTFB and datarate.', boolean: true, default: false })
@@ -22,9 +23,10 @@ Yargs.usage(`Usage: $0 -l "stdio" -d "exec {programPath: '/path/to/listener.sh'}
     () => {},
     async (argv) => {
       const cascading = ((Array.isArray(argv.cascade) ? argv.cascade : argv.cascace) || []) as string[]
-      const port = argv.port || (await GetPort())
+      const port = argv.port ? argv.port : (await GetPort())
       const proxy = new PlaybackProxy({
         cacheRoot: argv.root,
+        host: argv.host,
         port,
         cascading,
         mode: argv.mode as PlaybackProxyMode,
@@ -35,7 +37,7 @@ Yargs.usage(`Usage: $0 -l "stdio" -d "exec {programPath: '/path/to/listener.sh'}
 
       await proxy.start()
 
-      console.log(`Playback proxy started on ${proxy.cacheRoot} as http://localhost:${proxy.port}`)
+      console.log(`Playback proxy started on ${proxy.cacheRoot} as http://${proxy.host}:${proxy.port}`)
 
       const autoSave = setInterval(() => {
         proxy.saveSpec()

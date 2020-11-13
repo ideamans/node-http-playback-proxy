@@ -1,10 +1,12 @@
 import { URL } from 'url'
 import Path from 'path'
 import QueryString from 'querystring'
+import Sha1 from 'sha1'
 
 export class ProxyUrl extends URL {
   static directoryIndex = 'index.html'
-  static maxFilenameLength = 256
+  static maxFilenameLength = 196
+  static fileUniqHashLength = 8
 
   get filePath(): string {
     let path = this.pathname
@@ -23,8 +25,13 @@ export class ProxyUrl extends URL {
 
     let filename = base
     if (this.search !== '') {
-      filename = `${filename}~${this.search.slice(1)}`.slice(0, ProxyUrl.maxFilenameLength - ext.length)
+      filename = `${filename}~${this.search.slice(1)}`
     }
+    if (filename.length > ProxyUrl.maxFilenameLength) {
+      const seed = filename.slice(ProxyUrl.maxFilenameLength)
+      filename = filename.slice(0, ProxyUrl.maxFilenameLength) + '_' + Sha1(seed).slice(0, ProxyUrl.fileUniqHashLength)
+    }
+
     filename += ext
 
     return Path.join(dir, filename)

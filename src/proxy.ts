@@ -82,11 +82,12 @@ export class PlaybackProxy {
     return Buffer.from('')
   }
 
-  async dataFileStream(res: Resource, cascadings: string[] = []): Promise<Stream.Readable> {
+  async dataFileStream(res: Resource, cascadings: string[] = []): Promise<Stream.Readable|undefined> {
     if (this.cacheRoot) {
       for (let cascade of cascadings.concat(this.cascading, DEFAULT_DATA_STORE).filter((c) => c !== '')) {
         const path = Path.join(this.cacheRoot, cascade, res.path)
         if (await Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
+        else return
       }
       throw new Error('data file not found')
     } else {
@@ -95,7 +96,6 @@ export class PlaybackProxy {
   }
 
   async saveDataFile(res: Resource, buffer: Buffer) {
-    if (buffer.length < 1) return
     if (this.cacheRoot) {
       const path = Path.join(this.cacheRoot, DEFAULT_DATA_STORE, res.path)
       await Fsx.ensureFile(path)
@@ -134,6 +134,7 @@ export class PlaybackProxy {
     ctx.onResponse((ctx, cb) => {
       resource.ttfb = hrtimeToMs(process.hrtime(requestStarted))
       const response = ctx.serverToProxyResponse
+      resource.statusCode = response.statusCode || 200
       resource.headers = Object.assign({}, response.headers)
 
       // transfer-encoding: chunk not needed
@@ -149,7 +150,10 @@ export class PlaybackProxy {
 
       ctx.addResponseFilter(counter)
 
-      cb()
+      // Write blank file once. If has body, update it with onResponseData and onResonseEnd
+      this.saveDataFile(resource, Buffer.from(''))
+        .then(() => cb())
+        .catch(err => cb(err))
     })
 
     // Bacause if use gunzip first, onResponce will receive response as transfer-encoding: chunk and content-type: undefined.
@@ -207,10 +211,12 @@ export class PlaybackProxy {
           const cascadingHeader = request.headers['x-proxy-cascade'] || ''
           const cascadings: string[] = Array.isArray(cascadingHeader) ? cascadingHeader : cascadingHeader.split(/\s*,\s*/)
 
+          response.statusCode = resource.statusCode
+          response.removeHeader('content-length')
+
           this.dataFileStream(resource, cascadings)
             .then((stream) => {
-              response.statusCode = 200
-              response.removeHeader('content-length')
+              if (!stream) return response.end()
 
               let st = stream
               if (response.getHeader('content-encoding') === 'gzip') {

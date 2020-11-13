@@ -8,6 +8,7 @@ export class Resource {
   method: string = 'get'
   url: string = ''
   path: string = ''
+  statusCode: number = 200
   headers: HeadersType = {}
   ttfb: number = 0
   originResourceSize: number = 0
@@ -20,6 +21,7 @@ export class Resource {
     if (values.method !== undefined) this.method = values.method
     if (values.url !== undefined) this.url = values.url
     if (values.path !== undefined) this.path = values.path
+    if (values.statusCode !== undefined) this.statusCode = values.statusCode
     if (values.headers !== undefined) this.headers = values.headers
     if (values.ttfb !== undefined) this.ttfb = values.ttfb
     if (values.originTransferSize !== undefined) this.originTransferSize = values.originTransferSize
@@ -28,9 +30,11 @@ export class Resource {
     if (values.originDuration !== undefined) this.originDuration = values.originDuration
     if (values.timestamp !== undefined) this.timestamp = values.timestamp
 
+    this.method = this.method.toLowerCase()
+
     if (!this.path) {
       const u = new ProxyUrl(this.url)
-      this.path = u.pathnize(this.method.toLowerCase())
+      this.path = u.pathnize(this.method)
     }
   }
 
@@ -137,11 +141,13 @@ export class Spec {
   }
 
   lookupResource(method: string, url: string) {
+    method = method.toLowerCase()
     const index = (this.resourcesIndex[method] = this.resourcesIndex[method] || {})
     return index[url]
   }
 
   findNearestResource(method: string, url: string) {
+    method = method.toLowerCase()
     const match = this.lookupResource(method, url)
     if (match) return match
 
@@ -172,7 +178,7 @@ export class Spec {
     const theQs = QueryString.parse(u.search)
     const tupples: [string, number][] = searchs.map(qs => [qs, ProxyUrl.queryStringDistance(QueryString.parse(qs), theQs)])
     const sorted = tupples.sort((a, b) => a[1] - b[1])
-    
+
     return bySearch[sorted[0][0]]
   }
 
