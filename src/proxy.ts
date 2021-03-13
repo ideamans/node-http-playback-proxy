@@ -31,6 +31,7 @@ export class PlaybackProxy {
   spec: Spec = new Spec()
   speed: number = 1.0
   sslCaDir: string = ''
+  prettySpecJson: boolean = true
 
   constructor(values: Partial<PlaybackProxy> = {}) {
     if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
@@ -45,6 +46,7 @@ export class PlaybackProxy {
     if (values.responseDebugHeaders !== undefined) this.responseDebugHeaders = values.responseDebugHeaders
     if (values.speed !== undefined) this.speed = values.speed
     if (values.sslCaDir !== undefined) this.sslCaDir = values.sslCaDir
+    if (values.prettySpecJson !== undefined) this.prettySpecJson = values.prettySpecJson
   }
 
   specFilePath() {
@@ -64,7 +66,7 @@ export class PlaybackProxy {
   async saveSpec() {
     if (this.cacheRoot) {
       await Fsx.ensureFile(this.specFilePath())
-      const json = this.spec.toJson()
+      const json = this.spec.toJson(this.prettySpecJson)
       await Fsx.writeFile(this.specFilePath(), json)
     }
   }
@@ -272,7 +274,7 @@ export class PlaybackProxy {
       }
     })
 
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const options: HttpMitmProxy.IProxyOptions = {
         port: this.port,
         host: this.host,

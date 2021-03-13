@@ -88,10 +88,9 @@ export class Spec {
     this.reIndex()
   }
 
-  toJson() {
-    return JSON.stringify({
-      resources: this.resources,
-    })
+  toJson(pretty: boolean = false) {
+    const data = { resources: this.resources }
+    return pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data)
   }
 
   get resourcesLength() {
