@@ -198,8 +198,8 @@ test('In gzip content-encoding', async (t) => {
     },
     testOnline: async (t, res, message) => {
       const resource = t.context.proxy.spec.getResource(0)
-      t.is(resource.originResourceSize, 115)
-      t.is(resource.originTransferSize, 105)
+      t.is(resource.origin.size, 115)
+      t.is(resource.origin.transfer, 105)
     },
   })
 })

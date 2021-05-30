@@ -91,8 +91,8 @@ async function testTtfbAndRate(t: ExecutionContext<MyProperties>, ttfb: number, 
   t.true(Math.abs(withOnlineProxy.duration - expected) < expected * 0.1, 'With online proxy')
 
   const resource = t.context.proxy.spec.lookupResource('GET', url.href)
-  t.true(Math.abs(resource.ttfb - ttfb) < Math.max(ttfb * 0.1, 50), 'TTFB with online proxy')
-  t.true(Math.abs(resource.originDuration - downloadTime) < Math.max(downloadTime * 0.1, 50), 'Download duration with online proxy')
+  t.true(Math.abs(resource.origin.ttfb - ttfb) < Math.max(ttfb * 0.1, 50), 'TTFB with online proxy')
+  t.true(Math.abs(resource.origin.duration - downloadTime) < Math.max(downloadTime * 0.1, 50), 'Download duration with online proxy')
 
   // With offline proxy
   t.context.proxy.mode = 'offline'

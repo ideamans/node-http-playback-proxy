@@ -4,17 +4,27 @@ import QueryString from 'querystring'
 
 export type HeadersType = { [prop: string]: any }
 
+export type OriginMetrics = {
+  ttfb: number,
+  size: number,
+  transfer: number,
+  duration: number,
+  contentEncoding: string,
+}
+
 export class Resource {
   method: string = 'get'
   url: string = ''
   path: string = ''
   statusCode: number = 200
   headers: HeadersType = {}
-  ttfb: number = 0
-  originResourceSize: number = 0
-  originTransferSize: number = 0
-  originContentEncoding: string = ''
-  originDuration: number = 0
+  origin: OriginMetrics = {
+    ttfb: 0,
+    size: 0,
+    transfer: 0,
+    duration: 0,
+    contentEncoding: ''
+  }
   timestamp: number = +new Date()
 
   constructor(values: Partial<Resource> = {}) {
@@ -23,11 +33,13 @@ export class Resource {
     if (values.path !== undefined) this.path = values.path
     if (values.statusCode !== undefined) this.statusCode = values.statusCode
     if (values.headers !== undefined) this.headers = values.headers
-    if (values.ttfb !== undefined) this.ttfb = values.ttfb
-    if (values.originTransferSize !== undefined) this.originTransferSize = values.originTransferSize
-    if (values.originResourceSize !== undefined) this.originResourceSize = values.originResourceSize
-    if (values.originContentEncoding !== undefined) this.originContentEncoding = values.originContentEncoding
-    if (values.originDuration !== undefined) this.originDuration = values.originDuration
+    if (values.origin !== undefined) {
+      if (values.origin.ttfb !== undefined) this.origin.ttfb = values.origin.ttfb
+      if (values.origin.size !== undefined) this.origin.size = values.origin.size
+      if (values.origin.transfer !== undefined) this.origin.transfer = values.origin.transfer
+      if (values.origin.duration !== undefined) this.origin.duration = values.origin.duration
+      if (values.origin.contentEncoding !== undefined) this.origin.contentEncoding = values.origin.contentEncoding
+    }
     if (values.timestamp !== undefined) this.timestamp = values.timestamp
 
     this.method = this.method.toLowerCase()
@@ -43,9 +55,9 @@ export class Resource {
   }
 
   originBytesPerSecond(gap = 0) {
-    if (this.originDuration <= 0) return NaN
-    const seconds = (this.originDuration + gap) / 1000
-    return this.originTransferSize / seconds
+    if (this.origin.duration <= 0) return NaN
+    const seconds = (this.origin.duration + gap) / 1000
+    return this.origin.transfer / seconds
   }
 }
 

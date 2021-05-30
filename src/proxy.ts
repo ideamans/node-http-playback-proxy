@@ -133,7 +133,7 @@ export class PlaybackProxy {
     })
 
     ctx.onResponse((ctx, cb) => {
-      resource.ttfb = hrtimeToMs(process.hrtime(requestStarted))
+      resource.origin.ttfb = hrtimeToMs(process.hrtime(requestStarted))
       const response = ctx.serverToProxyResponse
       resource.statusCode = response.statusCode || 200
       resource.headers = Object.assign({}, response.headers)
@@ -141,12 +141,12 @@ export class PlaybackProxy {
       // transfer-encoding: chunk not needed
       delete resource.headers['transfer-encoding']
 
-      resource.originTransferSize = parseInt(response.headers['content-length'] || '0')
-      resource.originContentEncoding = response.headers['content-encoding'] || ''
+      resource.origin.transfer = parseInt(response.headers['content-length'] || '0')
+      resource.origin.contentEncoding = response.headers['content-encoding'] || ''
 
       if (this.responseDebugHeaders) {
-        response.headers['x-origin-content-encoding'] = resource.originContentEncoding
-        response.headers['x-origin-transfer-size'] = resource.originTransferSize.toString()
+        response.headers['x-origin-content-encoding'] = resource.origin.contentEncoding
+        response.headers['x-origin-transfer-size'] = resource.origin.transfer.toString()
       }
 
       ctx.addResponseFilter(counter)
@@ -165,12 +165,12 @@ export class PlaybackProxy {
       cb(undefined, chunk)
     })
     ctx.onResponseEnd((ctx, cb) => {
-      resource.originDuration = hrtimeToMs(process.hrtime(requestStarted)) - resource.ttfb
+      resource.origin.duration = hrtimeToMs(process.hrtime(requestStarted)) - resource.origin.ttfb
 
       const buffer = Buffer.concat(chunks)
-      resource.originResourceSize = buffer.length
-      resource.originTransferSize = transferSize
-      if (resource.originTransferSize <= 0) resource.originTransferSize = buffer.length
+      resource.origin.size = buffer.length
+      resource.origin.transfer = transferSize
+      if (resource.origin.transfer <= 0) resource.origin.transfer = buffer.length
 
       this.saveDataFile(resource, buffer)
         .then(() => cb())
@@ -200,11 +200,11 @@ export class PlaybackProxy {
 
       if (this.responseDebugHeaders) {
         response.setHeader('x-playback', '1')
-        response.setHeader('x-origin-content-encoding', resource.originContentEncoding)
-        response.setHeader('x-origin-resource-size', resource.originResourceSize.toString())
-        response.setHeader('x-origin-ttfb', resource.ttfb.toString())
-        response.setHeader('x-origin-transfer-duration', resource.originDuration.toString())
-        response.setHeader('x-origin-transfer-size', resource.originTransferSize.toString())
+        response.setHeader('x-origin-content-encoding', resource.origin.contentEncoding)
+        response.setHeader('x-origin-resource-size', resource.origin.size.toString())
+        response.setHeader('x-origin-ttfb', resource.origin.ttfb.toString())
+        response.setHeader('x-origin-transfer-duration', resource.origin.duration.toString())
+        response.setHeader('x-origin-transfer-size', resource.origin.transfer.toString())
       }
 
       const handler = () => {
@@ -244,7 +244,7 @@ export class PlaybackProxy {
       }
 
       if (this.throttling) {
-        setTimeout(handler, (resource.ttfb + this.latencyGap) / this.speed)
+        setTimeout(handler, (resource.origin.ttfb + this.latencyGap) / this.speed)
       } else {
         handler()
       }
