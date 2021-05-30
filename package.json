@@ -1,6 +1,6 @@
 {
-  "name": "http-playback-proxy",
-  "version": "0.13.1",
+  "name": "@rehearsal/http-playback-proxy",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "bin": "dist/command.js",
   "description": "",
