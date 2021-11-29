@@ -1,10 +1,12 @@
 {
-  "resources": [{
-    "method": "GET",
-    "url": "http://localhost:61470/index.html?name=value",
-    "path": "get/http/localhost~61470/index~name=value.html",
-    "headers": {},
-    "ttfb": 0,
-    "dataRate": 0
-  }]
+  "resources": [
+    {
+      "method": "GET",
+      "url": "http://localhost:61470/index.html?name=value",
+      "path": "get/http/localhost~61470/index~name=value.html",
+      "headers": {},
+      "ttfb": 0,
+      "dataRate": 0
+    }
+  ]
 }

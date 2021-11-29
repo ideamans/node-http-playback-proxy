@@ -13,7 +13,8 @@
     "prepublishOnly": "npm run build",
     "prepare": "npm run build",
     "command": "ts-node src/command.ts",
-    "debug": "ts-node src/debug.ts"
+    "debug": "ts-node src/debug.ts",
+    "prettier": "prettier --write ."
   },
   "license": "MIT",
   "devDependencies": {
@@ -33,6 +34,7 @@
     "axios": "^0.19.2",
     "http-server": "^0.12.1",
     "lorem-ipsum": "^2.0.3",
+    "prettier": "^2.5.0",
     "request": "^2.88.2",
     "tmp-promise": "^2.0.2",
     "ts-node": "^8.10.1",
