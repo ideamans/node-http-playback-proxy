@@ -24,6 +24,7 @@ export class PlaybackProxy {
   keepAlive: boolean = false
   proxyTimeout: number = 0
   mode: PlaybackProxyMode = 'online'
+  waiting = true
   throttling = true
   latencyGap = 0
   responseDebugHeaders = false
@@ -42,6 +43,7 @@ export class PlaybackProxy {
     if (values.proxyTimeout !== undefined)
       this.proxyTimeout = values.proxyTimeout
     if (values.mode !== undefined) this.mode = values.mode
+    if (values.waiting !== undefined) this.waiting = values.waiting
     if (values.throttling !== undefined) this.throttling = values.throttling
     if (values.latencyGap !== undefined) this.latencyGap = values.latencyGap
     if (values.responseDebugHeaders !== undefined)
@@ -295,7 +297,7 @@ export class PlaybackProxy {
         }
       }
 
-      if (this.throttling) {
+      if (this.waiting) {
         setTimeout(
           handler,
           (resource.origin.ttfb + this.latencyGap) / this.speed

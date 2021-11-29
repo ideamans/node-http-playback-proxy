@@ -30,9 +30,15 @@ Yargs.usage(
     choices: ['mixed', 'online', 'offline'],
     default: 'mixed',
   })
+  .option('no-waiting', {
+    alias: 'W',
+    description: 'Disable resource TTFB waiting.',
+    boolean: true,
+    default: false,
+  })
   .option('no-throttling', {
     alias: 'T',
-    description: 'Disable resource TTFB and data rate.',
+    description: 'Disable resource data rate.',
     boolean: true,
     default: false,
   })
@@ -73,6 +79,7 @@ Yargs.usage(
         port,
         cascading,
         mode: argv.mode as PlaybackProxyMode,
+        waiting: !argv.noWaiting,
         throttling: !argv.noThrottling,
         responseDebugHeaders: !!argv.debugHeaders,
         sslCaDir: argv.sslCaDir as string,

@@ -223,9 +223,9 @@ async function testProxySenario(
   t.context.proxy.mode = 'mixed'
 
   await (async () => {
-    // mixed proxy returnes cache if exists
+    // mixed proxy returns cache if exists
     const resMixed = await t.context.axios.get(targetUrl)
-    t.regex(resMixed.data, /ORIGIN/, 'mixied proxy returns cache if exists.')
+    t.regex(resMixed.data, /ORIGIN/, 'mixed proxy returns cache if exists.')
     t.is(
       resMixed.headers['x-playback'],
       '1',
@@ -242,7 +242,7 @@ async function testProxySenario(
     t.regex(
       resMixedNew.data,
       /the origin/,
-      'mixied proxy returns from origin about an another url.'
+      'mixed proxy returns from origin about an another url.'
     )
     t.is(
       resMixedNew.headers['x-playback'],
@@ -365,7 +365,7 @@ test('TTFB', async (t) => {
   t.true(Math.abs(actualTime - 500) < 100)
 })
 
-test('Datarate', async (t) => {
+test('Data rate', async (t) => {
   const content = Buffer.from(new LoremIpsum().generateParagraphs(100))
   const rate = content.length / 0.5
   const chunksize = content.length / 10
@@ -394,7 +394,7 @@ test('Datarate', async (t) => {
     const actualTime = +new Date() - started
     t.true(
       Math.abs(actualTime - 500) < 100,
-      'Offline response time almost reproduces online datarate'
+      'Offline response time almost reproduces online data rate'
     )
   })()
 
@@ -406,7 +406,7 @@ test('Datarate', async (t) => {
     const actualTime = +new Date() - started
     t.true(
       Math.abs(actualTime - 250) < 100,
-      'Offline response time almost reproduces online datarate x2 fast'
+      'Offline response time almost reproduces online data rate x2 fast'
     )
   })()
 
@@ -418,7 +418,7 @@ test('Datarate', async (t) => {
     const actualTime = +new Date() - started
     t.true(
       Math.abs(actualTime - 1000) < 100,
-      'Offline response time almost reproduces online datarate x2 slow'
+      'Offline response time almost reproduces online data rate x2 slow'
     )
   })()
 
@@ -430,7 +430,7 @@ test('Datarate', async (t) => {
     const actualTime = +new Date() - started
     t.true(
       Math.abs(actualTime - 100) < 100,
-      'Offline response time almost reproduces online datarate x2 slow'
+      'Offline response time almost reproduces online data rate x2 slow'
     )
   })()
 })

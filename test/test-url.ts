@@ -1,10 +1,10 @@
 import { ProxyUrl } from '../src/url'
 import QueryString from 'querystring'
 import anyTest, { TestInterface } from 'ava'
-const test = anyTest as TestInterface<{ mycontext: any }>
+const test = anyTest as TestInterface<{ myContext: any }>
 
 test('URL pathnization', (t) => {
-  const longparam = 'x'.repeat(1000)
+  const longParam = 'x'.repeat(1000)
   t.is(
     new ProxyUrl('http://example.com').pathnize('get'),
     'get/http/example.com/index.html'
@@ -43,7 +43,7 @@ test('URL pathnization', (t) => {
     'get/http/example.com/path/to/image.jpg'
   )
   t.is(
-    new ProxyUrl(`http://example.com/path/to/image.jpg?${longparam}`).pathnize(
+    new ProxyUrl(`http://example.com/path/to/image.jpg?${longParam}`).pathnize(
       'get'
     ),
     `get/http/example.com/path/to/image~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_a662ce40.jpg`
