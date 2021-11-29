@@ -55,16 +55,16 @@ export class ProxyUrl extends URL {
     qsb: QueryString.ParsedUrlQuery
   ): number {
     let match = 0,
-      unmatch = 0,
+      nomatch = 0,
       bNotInA = 0
     for (const a in qsa) {
       if (qsa[a] === qsb[a]) match++
-      else unmatch++
+      else nomatch++
     }
     for (const b in qsb) {
       if (qsa[b] === undefined) bNotInA++
     }
 
-    return (unmatch + bNotInA) / (match + unmatch + bNotInA)
+    return (nomatch + bNotInA) / (match + nomatch + bNotInA)
   }
 }

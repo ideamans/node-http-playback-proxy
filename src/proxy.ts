@@ -177,13 +177,13 @@ export class PlaybackProxy {
 
       ctx.addResponseFilter(counter)
 
-      // Write blank file once. If has body, update it with onResponseData and onResonseEnd
+      // Write blank file once. If has body, update it with onResponseData and onResponseEnd
       this.saveDataFile(resource, Buffer.from(''))
         .then(() => cb())
         .catch((err) => cb(err))
     })
 
-    // Bacause if use gunzip first, onResponce will receive response as transfer-encoding: chunk and content-type: undefined.
+    // Because if use gunzip first, onResponse will receive response as transfer-encoding: chunk and content-type: undefined.
     ctx.use(HttpMitmProxy.gunzip)
 
     ctx.onResponseData((ctx, chunk, cb) => {
@@ -221,7 +221,7 @@ export class PlaybackProxy {
     const response = ctx.proxyToClientResponse
     const resource =
       this.mode == 'offline'
-        ? // offline: best efort: lookup then nearest
+        ? // offline: best effort: lookup then nearest
           this.spec.findNearestResource(request.method || 'get', fullUrl)
         : // mixed: lookup only
           this.spec.lookupResource(request.method || 'get', fullUrl)

@@ -32,13 +32,13 @@ Yargs.usage(
   })
   .option('no-throttling', {
     alias: 'T',
-    description: 'Disable resource TTFB and datarate.',
+    description: 'Disable resource TTFB and data rate.',
     boolean: true,
     default: false,
   })
   .option('cascade', { alias: 'c', description: 'Cascaded contents path.' })
   .option('latency-gap', {
-    descritpion: 'Assumed millisecond gap of this proxy.',
+    description: 'Assumed millisecond gap of this proxy.',
     number: true,
     default: 15,
   })
@@ -65,7 +65,7 @@ Yargs.usage(
     async (argv) => {
       const cascading = ((Array.isArray(argv.cascade)
         ? argv.cascade
-        : argv.cascace) || []) as string[]
+        : argv.cascade) || []) as string[]
       const port = argv.port ? argv.port : await GetPort()
       const proxy = new PlaybackProxy({
         cacheRoot: argv.root,

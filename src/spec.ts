@@ -202,7 +202,7 @@ export class Spec {
     if (!bySearch) return
 
     const searchs = Object.keys(bySearch)
-    // Return unmatch if 0: never happen
+    // Return nomatch if 0: never happen
     if (searchs.length === 0) return
 
     // Return if the path only one.
@@ -210,11 +210,11 @@ export class Spec {
 
     // Sort by QueryString distance.
     const theQs = QueryString.parse(u.search)
-    const tupples: [string, number][] = searchs.map((qs) => [
+    const tuples: [string, number][] = searchs.map((qs) => [
       qs,
       ProxyUrl.queryStringDistance(QueryString.parse(qs), theQs),
     ])
-    const sorted = tupples.sort((a, b) => a[1] - b[1])
+    const sorted = tuples.sort((a, b) => a[1] - b[1])
 
     return bySearch[sorted[0][0]]
   }
