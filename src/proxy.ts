@@ -26,6 +26,7 @@ export class PlaybackProxy {
   mode: PlaybackProxyMode = 'online'
   waiting = true
   throttling = true
+  fixedDataRate = 0
   latencyGap = 0
   responseDebugHeaders = false
   proxy?: HttpMitmProxy.IProxy
@@ -45,6 +46,8 @@ export class PlaybackProxy {
     if (values.mode !== undefined) this.mode = values.mode
     if (values.waiting !== undefined) this.waiting = values.waiting
     if (values.throttling !== undefined) this.throttling = values.throttling
+    if (values.fixedDataRate !== undefined)
+      this.fixedDataRate = values.fixedDataRate
     if (values.latencyGap !== undefined) this.latencyGap = values.latencyGap
     if (values.responseDebugHeaders !== undefined)
       this.responseDebugHeaders = values.responseDebugHeaders
@@ -279,12 +282,18 @@ export class PlaybackProxy {
               }
 
               const rate = resource.originBytesPerSecond(this.latencyGap)
-              if (this.throttling && rate > 0) {
+              if (this.fixedDataRate > 0) {
                 st = st.pipe(
-                  new Throttle({ rate: rate * this.speed, chunksize: 512 })
+                  new Throttle({ rate: this.fixedDataRate, chunksize: 512 })
+                )
+              } else if (this.throttling && rate > 0) {
+                st = st.pipe(
+                  new Throttle({
+                    rate: rate * this.speed,
+                    chunksize: 512,
+                  })
                 )
               }
-
               st.pipe(response)
             })
             .catch((ex) => {

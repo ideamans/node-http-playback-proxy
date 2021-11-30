@@ -393,7 +393,7 @@ test('Data rate', async (t) => {
     await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
     const actualTime = +new Date() - started
     t.true(
-      Math.abs(actualTime - 500) < 100,
+      Math.abs(actualTime - 500) < 150,
       'Offline response time almost reproduces online data rate'
     )
   })()
@@ -428,9 +428,16 @@ test('Data rate', async (t) => {
     const started = +new Date()
     await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
     const actualTime = +new Date() - started
-    t.true(
-      Math.abs(actualTime - 100) < 100,
-      'Offline response time almost reproduces online data rate x2 slow'
-    )
+    t.true(Math.abs(actualTime - 100) < 100, 'Offline response speed faster')
+  })()
+
+  // No throttling but fixed data rate
+  await (async () => {
+    t.context.proxy.throttling = false
+    t.context.proxy.fixedDataRate = content.length / 1
+    const started = +new Date()
+    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    const actualTime = +new Date() - started
+    t.true(Math.abs(actualTime - 1000) < 150, 'Offline response speed slow')
   })()
 })
