@@ -147,7 +147,7 @@ export class PlaybackProxy {
     })
 
     ctx.onResponse((ctx, cb) => {
-      resource.origin.ttfb = hrtimeToMs(process.hrtime(requestStarted))
+      resource.server.ttfb = hrtimeToMs(process.hrtime(requestStarted))
       const response = ctx.serverToProxyResponse
       resource.statusCode = response.statusCode || 200
       resource.headers = Object.assign({}, response.headers)
@@ -155,17 +155,17 @@ export class PlaybackProxy {
       // transfer-encoding: chunk not needed
       delete resource.headers['transfer-encoding']
 
-      resource.origin.transfer = parseInt(
+      resource.server.transfer = parseInt(
         response.headers['content-length'] || '0'
       )
-      resource.origin.contentEncoding =
+      resource.server.contentEncoding =
         response.headers['content-encoding'] || ''
 
       if (this.responseDebugHeaders) {
-        response.headers['x-origin-content-encoding'] =
-          resource.origin.contentEncoding
-        response.headers['x-origin-transfer-size'] =
-          resource.origin.transfer.toString()
+        response.headers['x-playback-server-content-encoding'] =
+          resource.server.contentEncoding
+        response.headers['x-playback-server-transfer-size'] =
+          resource.server.transfer.toString()
       }
 
       ctx.addResponseFilter(counter)
@@ -184,14 +184,14 @@ export class PlaybackProxy {
       cb(undefined, chunk)
     })
     ctx.onResponseEnd((ctx, cb) => {
-      resource.origin.duration =
-        hrtimeToMs(process.hrtime(requestStarted)) - resource.origin.ttfb
+      resource.server.duration =
+        hrtimeToMs(process.hrtime(requestStarted)) - resource.server.ttfb
 
       const buffer = Buffer.concat(chunks)
-      resource.origin.size = buffer.length
-      resource.origin.transfer = transferSize
-      if (resource.origin.transfer <= 0)
-        resource.origin.transfer = buffer.length
+      resource.server.size = buffer.length
+      resource.server.transfer = transferSize
+      if (resource.server.transfer <= 0)
+        resource.server.transfer = buffer.length
 
       this.saveDataFile(resource, buffer)
         .then(() => cb())
@@ -229,21 +229,24 @@ export class PlaybackProxy {
       if (this.responseDebugHeaders) {
         response.setHeader('x-playback', '1')
         response.setHeader(
-          'x-origin-content-encoding',
-          resource.origin.contentEncoding
+          'x-playback-server-content-encoding',
+          resource.server.contentEncoding
         )
         response.setHeader(
-          'x-origin-resource-size',
-          resource.origin.size.toString()
-        )
-        response.setHeader('x-origin-ttfb', resource.origin.ttfb.toString())
-        response.setHeader(
-          'x-origin-transfer-duration',
-          resource.origin.duration.toString()
+          'x-playback-server-resource-size',
+          resource.server.size.toString()
         )
         response.setHeader(
-          'x-origin-transfer-size',
-          resource.origin.transfer.toString()
+          'x-playback-server-ttfb',
+          resource.server.ttfb.toString()
+        )
+        response.setHeader(
+          'x-playback-server-transfer-duration',
+          resource.server.duration.toString()
+        )
+        response.setHeader(
+          'x-playback-server-transfer-size',
+          resource.server.transfer.toString()
         )
       }
 
@@ -264,7 +267,7 @@ export class PlaybackProxy {
                 st = stream
               }
 
-              const rate = resource.originBytesPerSecond(this.latencyGap)
+              const rate = resource.serverBytesPerSecond(this.latencyGap)
               if (this.fixedDataRate > 0) {
                 st = st.pipe(
                   new Throttle({ rate: this.fixedDataRate, chunksize: 512 })
@@ -292,7 +295,7 @@ export class PlaybackProxy {
       if (this.waiting) {
         setTimeout(
           handler,
-          (resource.origin.ttfb + this.latencyGap) / this.speed
+          (resource.server.ttfb + this.latencyGap) / this.speed
         )
       } else {
         handler()
