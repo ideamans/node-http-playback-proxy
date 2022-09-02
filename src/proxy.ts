@@ -15,7 +15,7 @@ function hrtimeToMs(hrtime: [number, number]) {
 
 export class PlaybackProxy {
   static networkFile = 'network.json'
-  cacheRoot: string = ''
+  saveDir: string = ''
   port: number = 8080
   host: string = 'localhost'
   keepAlive: boolean = false
@@ -32,7 +32,7 @@ export class PlaybackProxy {
   sslCaDir: string = ''
 
   constructor(values: Partial<PlaybackProxy> = {}) {
-    if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
+    if (values.saveDir !== undefined) this.saveDir = values.saveDir
     if (values.port !== undefined) this.port = values.port
     if (values.host !== undefined) this.host = values.host
     if (values.keepAlive !== undefined) this.keepAlive = values.keepAlive
@@ -51,12 +51,12 @@ export class PlaybackProxy {
   }
 
   networkFilePath() {
-    const path = Path.join(this.cacheRoot, PlaybackProxy.networkFile)
+    const path = Path.join(this.saveDir, PlaybackProxy.networkFile)
     return path
   }
 
   async loadNetwork() {
-    if (this.cacheRoot) {
+    if (this.saveDir) {
       if (await Fsx.pathExists(this.networkFilePath())) {
         const json = await Fsx.readFile(this.networkFilePath())
         this.network = new Network(
@@ -67,7 +67,7 @@ export class PlaybackProxy {
   }
 
   async saveNetwork() {
-    if (this.cacheRoot) {
+    if (this.saveDir) {
       await Fsx.ensureFile(this.networkFilePath())
       const json = this.network.toJson(true)
       await Fsx.writeFile(this.networkFilePath(), json)
@@ -75,8 +75,8 @@ export class PlaybackProxy {
   }
 
   async loadDataFile(res: Resource) {
-    if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, res.path)
+    if (this.saveDir) {
+      const path = Path.join(this.saveDir, res.path)
       try {
         const buffer = await Fsx.readFile(path)
         return buffer
@@ -88,18 +88,18 @@ export class PlaybackProxy {
   }
 
   async dataFileStream(res: Resource): Promise<Stream.Readable | undefined> {
-    if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, res.path)
+    if (this.saveDir) {
+      const path = Path.join(this.saveDir, res.path)
       if (Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
       return
     } else {
-      throw new Error('requires cacheRoot')
+      throw new Error('requires resourceRoot')
     }
   }
 
   async saveDataFile(res: Resource, buffer: Buffer) {
-    if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, res.path)
+    if (this.saveDir) {
+      const path = Path.join(this.saveDir, res.path)
       await Fsx.ensureFile(path)
       await Fsx.writeFile(path, buffer)
     }

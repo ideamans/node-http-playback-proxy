@@ -31,7 +31,7 @@ test.beforeEach(async (t) => {
   t.context.tmpDir = await Tmp.dir({ unsafeCleanup: true })
   t.context.proxyPort = await GetPort()
   t.context.proxy = new PlaybackProxy({
-    cacheRoot: t.context.tmpDir.path,
+    saveDir: t.context.tmpDir.path,
     port: t.context.proxyPort,
     responseDebugHeaders: true,
     throttling: true,

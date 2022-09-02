@@ -9,19 +9,22 @@ Yargs.usage(
   `Usage: $0 -l "stdio" -d "exec {programPath: '/path/to/listener.sh'}"`
 )
   .version(Package.version, 'version')
-  .option('root', {
-    alias: 'r',
-    description: 'Cache root directory.',
+  .option('save', {
+    alias: 's',
+    description: 'Directory to save resources.',
+    string: true,
     default: './',
   })
   .option('host', {
     alias: 'h',
     description: 'Hostname of proxy.',
+    string: true,
     default: 'localhost',
   })
   .option('port', {
     alias: 'p',
     description: 'Proxy port. Assign unused port if 0.',
+    number: true,
     default: 0,
   })
   .option('mode', {
@@ -62,10 +65,10 @@ Yargs.usage(
     '*',
     'Starts playback proxy',
     () => {},
-    async (argv) => {
+    async (argv: any) => {
       const port = argv.port ? argv.port : await GetPort()
       const proxy = new PlaybackProxy({
-        cacheRoot: argv.root,
+        saveDir: argv.save,
         host: argv.host,
         port,
         mode: argv.mode as PlaybackProxyMode,
@@ -78,7 +81,7 @@ Yargs.usage(
       await proxy.start()
 
       console.log(
-        `Playback proxy started on ${proxy.cacheRoot} as http://${proxy.host}:${proxy.port}`
+        `Playback proxy started on ${proxy.saveDir} as http://${proxy.host}:${proxy.port}`
       )
 
       const autoSave = setInterval(() => {
