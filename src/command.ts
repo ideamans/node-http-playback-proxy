@@ -69,15 +69,11 @@ Yargs.usage(
     'Starts playback proxy',
     () => {},
     async (argv) => {
-      const cascading = ((Array.isArray(argv.cascade)
-        ? argv.cascade
-        : argv.cascade) || []) as string[]
       const port = argv.port ? argv.port : await GetPort()
       const proxy = new PlaybackProxy({
         cacheRoot: argv.root,
         host: argv.host,
         port,
-        cascading,
         mode: argv.mode as PlaybackProxyMode,
         waiting: !argv.noWaiting,
         throttling: !argv.noThrottling,

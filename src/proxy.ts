@@ -9,8 +9,6 @@ import { Throttle } from 'stream-throttle'
 
 export type PlaybackProxyMode = 'online' | 'offline' | 'mixed'
 
-const DEFAULT_DATA_STORE = 'default'
-
 function hrtimeToMs(hrtime: [number, number]) {
   return hrtime[0] * 1000 + hrtime[1] / 1e6
 }
@@ -18,7 +16,6 @@ function hrtimeToMs(hrtime: [number, number]) {
 export class PlaybackProxy {
   static specFile = 'spec.json'
   cacheRoot: string = ''
-  cascading: string[] = []
   port: number = 8080
   host: string = 'localhost'
   keepAlive: boolean = false
@@ -37,7 +34,6 @@ export class PlaybackProxy {
 
   constructor(values: Partial<PlaybackProxy> = {}) {
     if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
-    if (values.cascading !== undefined) this.cascading = values.cascading
     if (values.port !== undefined) this.port = values.port
     if (values.host !== undefined) this.host = values.host
     if (values.keepAlive !== undefined) this.keepAlive = values.keepAlive
@@ -81,7 +77,7 @@ export class PlaybackProxy {
 
   async loadDataFile(res: Resource) {
     if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, DEFAULT_DATA_STORE, res.path)
+      const path = Path.join(this.cacheRoot, res.path)
       try {
         const buffer = await Fsx.readFile(path)
         return buffer
@@ -92,17 +88,10 @@ export class PlaybackProxy {
     return Buffer.from('')
   }
 
-  async dataFileStream(
-    res: Resource,
-    cascadings: string[] = []
-  ): Promise<Stream.Readable | undefined> {
+  async dataFileStream(res: Resource): Promise<Stream.Readable | undefined> {
     if (this.cacheRoot) {
-      for (let cascade of cascadings
-        .concat(this.cascading, DEFAULT_DATA_STORE)
-        .filter((c) => c !== '')) {
-        const path = Path.join(this.cacheRoot, cascade, res.path)
-        if (await Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
-      }
+      const path = Path.join(this.cacheRoot, res.path)
+      if (Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
       return
     } else {
       throw new Error('requires cacheRoot')
@@ -111,7 +100,7 @@ export class PlaybackProxy {
 
   async saveDataFile(res: Resource, buffer: Buffer) {
     if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, DEFAULT_DATA_STORE, res.path)
+      const path = Path.join(this.cacheRoot, res.path)
       await Fsx.ensureFile(path)
       await Fsx.writeFile(path, buffer)
     }
@@ -261,15 +250,10 @@ export class PlaybackProxy {
 
       const handler = () => {
         try {
-          const cascadingHeader = request.headers['x-proxy-cascade'] || ''
-          const cascadings: string[] = Array.isArray(cascadingHeader)
-            ? cascadingHeader
-            : cascadingHeader.split(/\s*,\s*/)
-
           response.statusCode = resource.statusCode
           response.removeHeader('content-length')
 
-          this.dataFileStream(resource, cascadings)
+          this.dataFileStream(resource)
             .then((stream) => {
               if (!stream) return response.end()
 
