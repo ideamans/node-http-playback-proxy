@@ -106,14 +106,14 @@ export type ResourceFilterCallback = (
   res: Resource
 ) => boolean
 
-export class Spec {
+export class Network {
   private resources: Resource[] = []
   resourceTree: ResourceTree = {}
   resourcesIndex: ResourcesIndex = {}
   resourcesTags: ResourceTag[] = []
 
   constructor(
-    values: Partial<Spec> & { resources?: Array<Partial<Resource>> } = {}
+    values: Partial<Network> & { resources?: Array<Partial<Resource>> } = {}
   ) {
     if (values.resources)
       this.resources = values.resources.map((r) => new Resource(r))

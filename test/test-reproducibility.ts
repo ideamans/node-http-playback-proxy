@@ -103,7 +103,7 @@ async function testTtfbAndRate(
     'With online proxy'
   )
 
-  const resource = t.context.proxy.spec.lookupResource('GET', url.href)
+  const resource = t.context.proxy.network.lookupResource('GET', url.href)
   t.true(
     Math.abs(resource.origin.ttfb - ttfb) < Math.max(ttfb * 0.1, 50),
     'TTFB with online proxy'

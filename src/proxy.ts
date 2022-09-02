@@ -1,7 +1,7 @@
 import HttpMitmProxy from 'http-mitm-proxy'
 import Fsx from 'fs-extra'
 import Path from 'path'
-import { Spec, Resource } from './network'
+import { Network, Resource } from './network'
 import Zlib from 'zlib'
 import Stream, { Transform, TransformCallback } from 'stream'
 import { ServerResponse } from 'http'
@@ -14,7 +14,7 @@ function hrtimeToMs(hrtime: [number, number]) {
 }
 
 export class PlaybackProxy {
-  static specFile = 'spec.json'
+  static networkFile = 'network.json'
   cacheRoot: string = ''
   port: number = 8080
   host: string = 'localhost'
@@ -27,10 +27,9 @@ export class PlaybackProxy {
   latencyGap = 0
   responseDebugHeaders = false
   proxy?: HttpMitmProxy.IProxy
-  spec: Spec = new Spec()
+  network: Network = new Network()
   speed: number = 1.0
   sslCaDir: string = ''
-  prettySpecJson: boolean = true
 
   constructor(values: Partial<PlaybackProxy> = {}) {
     if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
@@ -49,29 +48,29 @@ export class PlaybackProxy {
       this.responseDebugHeaders = values.responseDebugHeaders
     if (values.speed !== undefined) this.speed = values.speed
     if (values.sslCaDir !== undefined) this.sslCaDir = values.sslCaDir
-    if (values.prettySpecJson !== undefined)
-      this.prettySpecJson = values.prettySpecJson
   }
 
-  specFilePath() {
-    const path = Path.join(this.cacheRoot, PlaybackProxy.specFile)
+  networkFilePath() {
+    const path = Path.join(this.cacheRoot, PlaybackProxy.networkFile)
     return path
   }
 
-  async loadSpec() {
+  async loadNetwork() {
     if (this.cacheRoot) {
-      if (await Fsx.pathExists(this.specFilePath())) {
-        const json = await Fsx.readFile(this.specFilePath())
-        this.spec = new Spec(JSON.parse(json.toString()) as Partial<Spec>)
+      if (await Fsx.pathExists(this.networkFilePath())) {
+        const json = await Fsx.readFile(this.networkFilePath())
+        this.network = new Network(
+          JSON.parse(json.toString()) as Partial<Network>
+        )
       }
     }
   }
 
-  async saveSpec() {
+  async saveNetwork() {
     if (this.cacheRoot) {
-      await Fsx.ensureFile(this.specFilePath())
-      const json = this.spec.toJson(this.prettySpecJson)
-      await Fsx.writeFile(this.specFilePath(), json)
+      await Fsx.ensureFile(this.networkFilePath())
+      const json = this.network.toJson(true)
+      await Fsx.writeFile(this.networkFilePath(), json)
     }
   }
 
@@ -115,7 +114,7 @@ export class PlaybackProxy {
       clientRequest.url,
     ].join('')
 
-    const resource = this.spec.newResource({
+    const resource = this.network.newResource({
       method: clientRequest.method,
       url: fullUrl,
     })
@@ -216,9 +215,9 @@ export class PlaybackProxy {
     const resource =
       this.mode == 'offline'
         ? // offline: best effort: lookup then nearest
-          this.spec.findNearestResource(request.method || 'get', fullUrl)
+          this.network.findNearestResource(request.method || 'get', fullUrl)
         : // mixed: lookup only
-          this.spec.lookupResource(request.method || 'get', fullUrl)
+          this.network.lookupResource(request.method || 'get', fullUrl)
     if (resource) {
       ctx.use(HttpMitmProxy.gunzip)
 
@@ -304,7 +303,7 @@ export class PlaybackProxy {
   }
 
   async start() {
-    await this.loadSpec()
+    await this.loadNetwork()
     this.proxy = HttpMitmProxy()
 
     this.proxy.onRequest((ctx, cb) => {
@@ -343,6 +342,6 @@ export class PlaybackProxy {
 
   async stop() {
     if (this.proxy) await this.proxy.close()
-    await this.saveSpec()
+    await this.saveNetwork()
   }
 }

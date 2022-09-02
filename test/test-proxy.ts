@@ -73,11 +73,11 @@ async function testProxySenario(
     if (options.testResponseHeader)
       await options.testResponseHeader(t, resOnline, 'online response header')
 
-    await t.context.proxy.saveSpec()
+    await t.context.proxy.saveNetwork()
     t.is(
-      t.context.proxy.spec.resourcesLength,
+      t.context.proxy.network.resourcesLength,
       1,
-      'offline proxy spec got the first resource.'
+      'offline proxy network got the first resource.'
     )
 
     if (options.testOnline)
@@ -117,11 +117,11 @@ async function testProxySenario(
       'offline proxy throws 404'
     )
 
-    await t.context.proxy.saveSpec()
+    await t.context.proxy.saveNetwork()
     t.is(
-      t.context.proxy.spec.resourcesLength,
+      t.context.proxy.network.resourcesLength,
       1,
-      'offline proxy spec got no resource.'
+      'offline proxy network got no resource.'
     )
   })()
 
@@ -143,11 +143,11 @@ async function testProxySenario(
     if (options.testResponseHeader)
       await options.testResponseHeader(t, resSimilar, 'similar response header')
 
-    await t.context.proxy.saveSpec()
+    await t.context.proxy.saveNetwork()
     t.is(
-      t.context.proxy.spec.resourcesLength,
+      t.context.proxy.network.resourcesLength,
       1,
-      'offline proxy spec got no resource.'
+      'offline proxy network got no resource.'
     )
   })()
 
@@ -238,11 +238,11 @@ async function testProxySenario(
       'cache created by mixed proxy and includes "the origin".'
     )
 
-    await t.context.proxy.saveSpec()
+    await t.context.proxy.saveNetwork()
     t.is(
-      t.context.proxy.spec.resourcesLength,
+      t.context.proxy.network.resourcesLength,
       2,
-      'mixed proxy spec got a new resource.'
+      'mixed proxy network got a new resource.'
     )
   })()
 
@@ -292,7 +292,7 @@ test('In gzip content-encoding', async (t) => {
       t.is(res.headers['x-origin-transfer-size'], '105', message)
     },
     testOnline: async (t, res, message) => {
-      const resource = t.context.proxy.spec.getResource(0)
+      const resource = t.context.proxy.network.getResource(0)
       t.is(resource.origin.size, 115)
       t.is(resource.origin.transfer, 105)
     },
