@@ -42,7 +42,6 @@ Yargs.usage(
     boolean: true,
     default: false,
   })
-  .option('cascade', { alias: 'c', description: 'Cascaded contents path.' })
   .option('latency-gap', {
     description: 'Assumed millisecond gap of this proxy.',
     number: true,
