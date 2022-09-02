@@ -12,7 +12,7 @@ If you are going to 2 tests to same page:
 
 Performance of https://example.com/ are not same always.
 
-`http-playback-proxy` tries to reproduces download lateycy and throughput for each request.
+`http-playback-proxy` tries to reproduces download latency and throughput for each request.
 
 - Recording -> `http-playback-proxy`(recording) -> https://exmaple.com/
 - Performance test A -> `http-playback-proxy`(playback) -> https://example.com/
