@@ -42,11 +42,6 @@ Yargs.usage(
     boolean: true,
     default: false,
   })
-  .option('latency-gap', {
-    description: 'Assumed millisecond gap of this proxy.',
-    number: true,
-    default: 15,
-  })
   .option('debug-headers', {
     alias: 'd',
     description: 'Returns debug information in response headers.',
