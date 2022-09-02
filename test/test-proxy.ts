@@ -151,45 +151,10 @@ async function testProxySenario(
     )
   })()
 
-  // content cascading
-  await (async () => {
-    const cascadedOriginalPath = Path.join(
-      t.context.tmpDir.path,
-      'default',
-      'get',
-      'http',
-      `localhost~${t.context.originPort}`,
-      'index~name=value.html'
-    )
-    const originalHtml = await Fsx.readFile(cascadedOriginalPath)
-    const cascadedPath = Path.join(
-      t.context.tmpDir.path,
-      'cascade1',
-      'get',
-      'http',
-      `localhost~${t.context.originPort}`,
-      'index~name=value.html'
-    )
-    await Fsx.ensureFile(cascadedPath)
-    await Fsx.writeFile(
-      cascadedPath,
-      originalHtml.toString().replace(/the origin/g, 'CASCADED')
-    )
-
-    const resCascaded = await t.context.axios.get(targetUrl, {
-      headers: { 'x-proxy-cascade': 'cascade2,cascade1' },
-    })
-    t.regex(resCascaded.data, /CASCADED/, 'content cascaded')
-
-    const resNotCascaded = await t.context.axios.get(targetUrl)
-    t.notRegex(resNotCascaded.data, /CASCADED/, 'content not cascaded')
-  })()
-
   await (async () => {
     // modify cache contents
     const cachePath = Path.join(
       t.context.tmpDir.path,
-      'default',
       'get',
       'http',
       `localhost~${t.context.originPort}`,
@@ -261,7 +226,6 @@ async function testProxySenario(
     // cache contents
     const mixedCachePath = Path.join(
       t.context.tmpDir.path,
-      'default',
       'get',
       'http',
       `localhost~${t.context.originPort}`,
