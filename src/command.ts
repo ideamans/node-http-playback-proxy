@@ -87,7 +87,7 @@ Yargs.usage(
       )
 
       const autoSave = setInterval(() => {
-        proxy.saveSpec()
+        proxy.saveNetwork()
       }, 5 * 1000)
 
       process.on('SIGINT', () => {

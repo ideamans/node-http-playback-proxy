@@ -1,3 +1,3 @@
 export * from './url'
-export * from './spec'
+export * from './network'
 export * from './proxy'
