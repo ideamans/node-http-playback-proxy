@@ -1,7 +1,7 @@
 import HttpMitmProxy from 'http-mitm-proxy'
 import Fsx from 'fs-extra'
 import Path from 'path'
-import { Spec, Resource } from './spec'
+import { Spec, Resource } from './network'
 import Zlib from 'zlib'
 import Stream, { Transform, TransformCallback } from 'stream'
 import { ServerResponse } from 'http'
