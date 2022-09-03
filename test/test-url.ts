@@ -69,3 +69,22 @@ test('QueryString distance', (t) => {
   const qs6 = QueryString.parse('e=5')
   t.is(ProxyUrl.queryStringDistance(qs1, qs6), 1)
 })
+
+test('Remove params', (t) => {
+  t.is(
+    ProxyUrl.clearParams('http://example.com?foo=bar&baz=qux', ['foo']),
+    'http://example.com?foo=&baz=qux'
+  )
+  t.is(
+    ProxyUrl.clearParams('http://example.com?foo=bar&baz=qux', ['foo', 'baz']),
+    'http://example.com?foo=&baz='
+  )
+  t.is(
+    ProxyUrl.clearParams('http://example.com?foo=bar&baz=qux', ['foo', 'baz']),
+    'http://example.com?foo=&baz='
+  )
+  t.is(
+    ProxyUrl.clearParams('http://example.com?foo=bar&baz=qux', ['foo', 'baz']),
+    'http://example.com?foo=&baz='
+  )
+})

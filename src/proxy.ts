@@ -6,6 +6,7 @@ import Zlib from 'zlib'
 import Stream, { Transform, TransformCallback } from 'stream'
 import { ServerResponse } from 'http'
 import { Throttle } from 'stream-throttle'
+import { ProxyUrl } from './url'
 
 export type PlaybackProxyMode = 'online' | 'offline' | 'mixed'
 
@@ -21,6 +22,7 @@ export class PlaybackProxy {
   keepAlive: boolean = false
   proxyTimeout: number = 0
   mode: PlaybackProxyMode = 'online'
+  ignoreParams: string[] = []
   waiting = true
   throttling = true
   fixedDataRate = 0
@@ -39,6 +41,8 @@ export class PlaybackProxy {
     if (values.proxyTimeout !== undefined)
       this.proxyTimeout = values.proxyTimeout
     if (values.mode !== undefined) this.mode = values.mode
+    if (values.ignoreParams !== undefined)
+      this.ignoreParams = values.ignoreParams
     if (values.waiting !== undefined) this.waiting = values.waiting
     if (values.throttling !== undefined) this.throttling = values.throttling
     if (values.fixedDataRate !== undefined)
@@ -114,9 +118,11 @@ export class PlaybackProxy {
       clientRequest.url,
     ].join('')
 
+    const normalizedUrl = ProxyUrl.clearParams(fullUrl, this.ignoreParams)
+
     const resource = this.network.newResource({
       method: clientRequest.method,
-      url: fullUrl,
+      url: normalizedUrl,
     })
     const requestStarted = process.hrtime()
 
@@ -211,10 +217,12 @@ export class PlaybackProxy {
       request.url,
     ].join('')
 
+    const normalizedUrl = ProxyUrl.clearParams(fullUrl, this.ignoreParams)
+
     const response = ctx.proxyToClientResponse
     const resource = this.network.lookupResource(
       request.method || 'get',
-      fullUrl
+      normalizedUrl
     )
     if (resource) {
       ctx.use(HttpMitmProxy.gunzip)
