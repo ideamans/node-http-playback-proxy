@@ -1,10 +1,10 @@
 {
-  "name": "@ideamans/http-playback-proxy",
-  "version": "1.2.0",
+  "name": "http-playback-proxy",
+  "version": "2.0.0",
   "main": "dist/index.js",
   "bin": "dist/command.js",
   "description": "",
-  "homepage": "https://www.ideamans.com/",
+  "homepage": "https://github.com/ideamans/node-http-playback-proxy",
   "scripts": {
     "w": "ava -vws test/test-reproducibility.ts",
     "test": "ava -v",
@@ -51,7 +51,6 @@
     "yargs": "^15.3.1"
   },
   "ava": {
-    "compileEnhancements": false,
     "extensions": [
       "ts"
     ],

@@ -1,7 +1,7 @@
 import HttpMitmProxy from 'http-mitm-proxy'
 import Fsx from 'fs-extra'
 import Path from 'path'
-import { Spec, Resource } from './spec'
+import { Network, Resource } from './network'
 import Zlib from 'zlib'
 import Stream, { Transform, TransformCallback } from 'stream'
 import { ServerResponse } from 'http'
@@ -9,16 +9,13 @@ import { Throttle } from 'stream-throttle'
 
 export type PlaybackProxyMode = 'online' | 'offline' | 'mixed'
 
-const DEFAULT_DATA_STORE = 'default'
-
 function hrtimeToMs(hrtime: [number, number]) {
   return hrtime[0] * 1000 + hrtime[1] / 1e6
 }
 
 export class PlaybackProxy {
-  static specFile = 'spec.json'
-  cacheRoot: string = ''
-  cascading: string[] = []
+  static networkFile = 'network.json'
+  saveDir: string = ''
   port: number = 8080
   host: string = 'localhost'
   keepAlive: boolean = false
@@ -30,14 +27,12 @@ export class PlaybackProxy {
   latencyGap = 0
   responseDebugHeaders = false
   proxy?: HttpMitmProxy.IProxy
-  spec: Spec = new Spec()
+  network: Network = new Network()
   speed: number = 1.0
   sslCaDir: string = ''
-  prettySpecJson: boolean = true
 
   constructor(values: Partial<PlaybackProxy> = {}) {
-    if (values.cacheRoot !== undefined) this.cacheRoot = values.cacheRoot
-    if (values.cascading !== undefined) this.cascading = values.cascading
+    if (values.saveDir !== undefined) this.saveDir = values.saveDir
     if (values.port !== undefined) this.port = values.port
     if (values.host !== undefined) this.host = values.host
     if (values.keepAlive !== undefined) this.keepAlive = values.keepAlive
@@ -53,35 +48,35 @@ export class PlaybackProxy {
       this.responseDebugHeaders = values.responseDebugHeaders
     if (values.speed !== undefined) this.speed = values.speed
     if (values.sslCaDir !== undefined) this.sslCaDir = values.sslCaDir
-    if (values.prettySpecJson !== undefined)
-      this.prettySpecJson = values.prettySpecJson
   }
 
-  specFilePath() {
-    const path = Path.join(this.cacheRoot, PlaybackProxy.specFile)
+  networkFilePath() {
+    const path = Path.join(this.saveDir, PlaybackProxy.networkFile)
     return path
   }
 
-  async loadSpec() {
-    if (this.cacheRoot) {
-      if (await Fsx.pathExists(this.specFilePath())) {
-        const json = await Fsx.readFile(this.specFilePath())
-        this.spec = new Spec(JSON.parse(json.toString()) as Partial<Spec>)
+  async loadNetwork() {
+    if (this.saveDir) {
+      if (await Fsx.pathExists(this.networkFilePath())) {
+        const json = await Fsx.readFile(this.networkFilePath())
+        this.network = new Network(
+          JSON.parse(json.toString()) as Partial<Network>
+        )
       }
     }
   }
 
-  async saveSpec() {
-    if (this.cacheRoot) {
-      await Fsx.ensureFile(this.specFilePath())
-      const json = this.spec.toJson(this.prettySpecJson)
-      await Fsx.writeFile(this.specFilePath(), json)
+  async saveNetwork() {
+    if (this.saveDir) {
+      await Fsx.ensureFile(this.networkFilePath())
+      const json = this.network.toJson(true)
+      await Fsx.writeFile(this.networkFilePath(), json)
     }
   }
 
   async loadDataFile(res: Resource) {
-    if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, DEFAULT_DATA_STORE, res.path)
+    if (this.saveDir) {
+      const path = Path.join(this.saveDir, res.path)
       try {
         const buffer = await Fsx.readFile(path)
         return buffer
@@ -92,26 +87,19 @@ export class PlaybackProxy {
     return Buffer.from('')
   }
 
-  async dataFileStream(
-    res: Resource,
-    cascadings: string[] = []
-  ): Promise<Stream.Readable | undefined> {
-    if (this.cacheRoot) {
-      for (let cascade of cascadings
-        .concat(this.cascading, DEFAULT_DATA_STORE)
-        .filter((c) => c !== '')) {
-        const path = Path.join(this.cacheRoot, cascade, res.path)
-        if (await Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
-      }
+  async dataFileStream(res: Resource): Promise<Stream.Readable | undefined> {
+    if (this.saveDir) {
+      const path = Path.join(this.saveDir, res.path)
+      if (Fsx.pathExistsSync(path)) return Fsx.createReadStream(path)
       return
     } else {
-      throw new Error('requires cacheRoot')
+      throw new Error('requires resourceRoot')
     }
   }
 
   async saveDataFile(res: Resource, buffer: Buffer) {
-    if (this.cacheRoot) {
-      const path = Path.join(this.cacheRoot, DEFAULT_DATA_STORE, res.path)
+    if (this.saveDir) {
+      const path = Path.join(this.saveDir, res.path)
       await Fsx.ensureFile(path)
       await Fsx.writeFile(path, buffer)
     }
@@ -126,7 +114,7 @@ export class PlaybackProxy {
       clientRequest.url,
     ].join('')
 
-    const resource = this.spec.newResource({
+    const resource = this.network.newResource({
       method: clientRequest.method,
       url: fullUrl,
     })
@@ -159,7 +147,7 @@ export class PlaybackProxy {
     })
 
     ctx.onResponse((ctx, cb) => {
-      resource.origin.ttfb = hrtimeToMs(process.hrtime(requestStarted))
+      resource.server.ttfb = hrtimeToMs(process.hrtime(requestStarted))
       const response = ctx.serverToProxyResponse
       resource.statusCode = response.statusCode || 200
       resource.headers = Object.assign({}, response.headers)
@@ -167,17 +155,17 @@ export class PlaybackProxy {
       // transfer-encoding: chunk not needed
       delete resource.headers['transfer-encoding']
 
-      resource.origin.transfer = parseInt(
+      resource.server.transfer = parseInt(
         response.headers['content-length'] || '0'
       )
-      resource.origin.contentEncoding =
+      resource.server.contentEncoding =
         response.headers['content-encoding'] || ''
 
       if (this.responseDebugHeaders) {
-        response.headers['x-origin-content-encoding'] =
-          resource.origin.contentEncoding
-        response.headers['x-origin-transfer-size'] =
-          resource.origin.transfer.toString()
+        response.headers['x-playback-server-content-encoding'] =
+          resource.server.contentEncoding
+        response.headers['x-playback-server-transfer-size'] =
+          resource.server.transfer.toString()
       }
 
       ctx.addResponseFilter(counter)
@@ -196,14 +184,14 @@ export class PlaybackProxy {
       cb(undefined, chunk)
     })
     ctx.onResponseEnd((ctx, cb) => {
-      resource.origin.duration =
-        hrtimeToMs(process.hrtime(requestStarted)) - resource.origin.ttfb
+      resource.server.duration =
+        hrtimeToMs(process.hrtime(requestStarted)) - resource.server.ttfb
 
       const buffer = Buffer.concat(chunks)
-      resource.origin.size = buffer.length
-      resource.origin.transfer = transferSize
-      if (resource.origin.transfer <= 0)
-        resource.origin.transfer = buffer.length
+      resource.server.size = buffer.length
+      resource.server.transfer = transferSize
+      if (resource.server.transfer <= 0)
+        resource.server.transfer = buffer.length
 
       this.saveDataFile(resource, buffer)
         .then(() => cb())
@@ -227,9 +215,9 @@ export class PlaybackProxy {
     const resource =
       this.mode == 'offline'
         ? // offline: best effort: lookup then nearest
-          this.spec.findNearestResource(request.method || 'get', fullUrl)
+          this.network.findNearestResource(request.method || 'get', fullUrl)
         : // mixed: lookup only
-          this.spec.lookupResource(request.method || 'get', fullUrl)
+          this.network.lookupResource(request.method || 'get', fullUrl)
     if (resource) {
       ctx.use(HttpMitmProxy.gunzip)
 
@@ -241,35 +229,33 @@ export class PlaybackProxy {
       if (this.responseDebugHeaders) {
         response.setHeader('x-playback', '1')
         response.setHeader(
-          'x-origin-content-encoding',
-          resource.origin.contentEncoding
+          'x-playback-server-content-encoding',
+          resource.server.contentEncoding
         )
         response.setHeader(
-          'x-origin-resource-size',
-          resource.origin.size.toString()
-        )
-        response.setHeader('x-origin-ttfb', resource.origin.ttfb.toString())
-        response.setHeader(
-          'x-origin-transfer-duration',
-          resource.origin.duration.toString()
+          'x-playback-server-resource-size',
+          resource.server.size.toString()
         )
         response.setHeader(
-          'x-origin-transfer-size',
-          resource.origin.transfer.toString()
+          'x-playback-server-ttfb',
+          resource.server.ttfb.toString()
+        )
+        response.setHeader(
+          'x-playback-server-transfer-duration',
+          resource.server.duration.toString()
+        )
+        response.setHeader(
+          'x-playback-server-transfer-size',
+          resource.server.transfer.toString()
         )
       }
 
       const handler = () => {
         try {
-          const cascadingHeader = request.headers['x-proxy-cascade'] || ''
-          const cascadings: string[] = Array.isArray(cascadingHeader)
-            ? cascadingHeader
-            : cascadingHeader.split(/\s*,\s*/)
-
           response.statusCode = resource.statusCode
           response.removeHeader('content-length')
 
-          this.dataFileStream(resource, cascadings)
+          this.dataFileStream(resource)
             .then((stream) => {
               if (!stream) return response.end()
 
@@ -281,7 +267,7 @@ export class PlaybackProxy {
                 st = stream
               }
 
-              const rate = resource.originBytesPerSecond(this.latencyGap)
+              const rate = resource.serverBytesPerSecond(this.latencyGap)
               if (this.fixedDataRate > 0) {
                 st = st.pipe(
                   new Throttle({ rate: this.fixedDataRate, chunksize: 512 })
@@ -309,7 +295,7 @@ export class PlaybackProxy {
       if (this.waiting) {
         setTimeout(
           handler,
-          (resource.origin.ttfb + this.latencyGap) / this.speed
+          (resource.server.ttfb + this.latencyGap) / this.speed
         )
       } else {
         handler()
@@ -320,7 +306,7 @@ export class PlaybackProxy {
   }
 
   async start() {
-    await this.loadSpec()
+    await this.loadNetwork()
     this.proxy = HttpMitmProxy()
 
     this.proxy.onRequest((ctx, cb) => {
@@ -359,6 +345,6 @@ export class PlaybackProxy {
 
   async stop() {
     if (this.proxy) await this.proxy.close()
-    await this.saveSpec()
+    await this.saveNetwork()
   }
 }

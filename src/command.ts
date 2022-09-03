@@ -9,19 +9,22 @@ Yargs.usage(
   `Usage: $0 -l "stdio" -d "exec {programPath: '/path/to/listener.sh'}"`
 )
   .version(Package.version, 'version')
-  .option('root', {
-    alias: 'r',
-    description: 'Cache root directory.',
+  .option('save', {
+    alias: 's',
+    description: 'Directory to save resources.',
+    string: true,
     default: './',
   })
   .option('host', {
     alias: 'h',
     description: 'Hostname of proxy.',
+    string: true,
     default: 'localhost',
   })
   .option('port', {
     alias: 'p',
     description: 'Proxy port. Assign unused port if 0.',
+    number: true,
     default: 0,
   })
   .option('mode', {
@@ -41,12 +44,6 @@ Yargs.usage(
     description: 'Disable resource data rate.',
     boolean: true,
     default: false,
-  })
-  .option('cascade', { alias: 'c', description: 'Cascaded contents path.' })
-  .option('latency-gap', {
-    description: 'Assumed millisecond gap of this proxy.',
-    number: true,
-    default: 15,
   })
   .option('debug-headers', {
     alias: 'd',
@@ -68,16 +65,12 @@ Yargs.usage(
     '*',
     'Starts playback proxy',
     () => {},
-    async (argv) => {
-      const cascading = ((Array.isArray(argv.cascade)
-        ? argv.cascade
-        : argv.cascade) || []) as string[]
+    async (argv: any) => {
       const port = argv.port ? argv.port : await GetPort()
       const proxy = new PlaybackProxy({
-        cacheRoot: argv.root,
+        saveDir: argv.save,
         host: argv.host,
         port,
-        cascading,
         mode: argv.mode as PlaybackProxyMode,
         waiting: !argv.noWaiting,
         throttling: !argv.noThrottling,
@@ -88,11 +81,11 @@ Yargs.usage(
       await proxy.start()
 
       console.log(
-        `Playback proxy started on ${proxy.cacheRoot} as http://${proxy.host}:${proxy.port}`
+        `Playback proxy started on ${proxy.saveDir} as http://${proxy.host}:${proxy.port}`
       )
 
       const autoSave = setInterval(() => {
-        proxy.saveSpec()
+        proxy.saveNetwork()
       }, 5 * 1000)
 
       process.on('SIGINT', () => {

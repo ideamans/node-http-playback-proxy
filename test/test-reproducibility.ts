@@ -8,7 +8,7 @@ import anyTest, { TestInterface, ExecutionContext } from 'ava'
 import Tmp from 'tmp-promise'
 
 type MyProperties = {
-  originPort: number
+  serverPort: number
   tmpDir: Tmp.DirectoryResult
   server: Server
   proxyPort: number
@@ -31,7 +31,7 @@ test.beforeEach(async (t) => {
   t.context.tmpDir = await Tmp.dir({ unsafeCleanup: true })
   t.context.proxyPort = await GetPort()
   t.context.proxy = new PlaybackProxy({
-    cacheRoot: t.context.tmpDir.path,
+    saveDir: t.context.tmpDir.path,
     port: t.context.proxyPort,
     responseDebugHeaders: true,
     throttling: true,
@@ -103,13 +103,13 @@ async function testTtfbAndRate(
     'With online proxy'
   )
 
-  const resource = t.context.proxy.spec.lookupResource('GET', url.href)
+  const resource = t.context.proxy.network.lookupResource('GET', url.href)
   t.true(
-    Math.abs(resource.origin.ttfb - ttfb) < Math.max(ttfb * 0.1, 50),
+    Math.abs(resource.server.ttfb - ttfb) < Math.max(ttfb * 0.1, 50),
     'TTFB with online proxy'
   )
   t.true(
-    Math.abs(resource.origin.duration - downloadTime) <
+    Math.abs(resource.server.duration - downloadTime) <
       Math.max(downloadTime * 0.1, 50),
     'Download duration with online proxy'
   )

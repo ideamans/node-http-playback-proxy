@@ -4,7 +4,7 @@ import QueryString from 'querystring'
 
 export type HeadersType = { [prop: string]: any }
 
-export type OriginMetrics = {
+export type ServerMetrics = {
   ttfb: number
   size: number
   transfer: number
@@ -18,7 +18,7 @@ export class Resource {
   path: string = ''
   statusCode: number = 200
   headers: HeadersType = {}
-  origin: OriginMetrics = {
+  server: ServerMetrics = {
     ttfb: 0,
     size: 0,
     transfer: 0,
@@ -33,17 +33,17 @@ export class Resource {
     if (values.path !== undefined) this.path = values.path
     if (values.statusCode !== undefined) this.statusCode = values.statusCode
     if (values.headers !== undefined) this.headers = values.headers
-    if (values.origin !== undefined) {
-      if (values.origin.ttfb !== undefined)
-        this.origin.ttfb = values.origin.ttfb
-      if (values.origin.size !== undefined)
-        this.origin.size = values.origin.size
-      if (values.origin.transfer !== undefined)
-        this.origin.transfer = values.origin.transfer
-      if (values.origin.duration !== undefined)
-        this.origin.duration = values.origin.duration
-      if (values.origin.contentEncoding !== undefined)
-        this.origin.contentEncoding = values.origin.contentEncoding
+    if (values.server !== undefined) {
+      if (values.server.ttfb !== undefined)
+        this.server.ttfb = values.server.ttfb
+      if (values.server.size !== undefined)
+        this.server.size = values.server.size
+      if (values.server.transfer !== undefined)
+        this.server.transfer = values.server.transfer
+      if (values.server.duration !== undefined)
+        this.server.duration = values.server.duration
+      if (values.server.contentEncoding !== undefined)
+        this.server.contentEncoding = values.server.contentEncoding
     }
     if (values.timestamp !== undefined) this.timestamp = values.timestamp
 
@@ -59,10 +59,10 @@ export class Resource {
     return new ProxyUrl(this.url)
   }
 
-  originBytesPerSecond(gap = 0) {
-    if (this.origin.duration <= 0) return NaN
-    const seconds = (this.origin.duration + gap) / 1000
-    return this.origin.transfer / seconds
+  serverBytesPerSecond(gap = 0) {
+    if (this.server.duration <= 0) return NaN
+    const seconds = (this.server.duration + gap) / 1000
+    return this.server.transfer / seconds
   }
 }
 
@@ -106,14 +106,14 @@ export type ResourceFilterCallback = (
   res: Resource
 ) => boolean
 
-export class Spec {
+export class Network {
   private resources: Resource[] = []
   resourceTree: ResourceTree = {}
   resourcesIndex: ResourcesIndex = {}
   resourcesTags: ResourceTag[] = []
 
   constructor(
-    values: Partial<Spec> & { resources?: Array<Partial<Resource>> } = {}
+    values: Partial<Network> & { resources?: Array<Partial<Resource>> } = {}
   ) {
     if (values.resources)
       this.resources = values.resources.map((r) => new Resource(r))

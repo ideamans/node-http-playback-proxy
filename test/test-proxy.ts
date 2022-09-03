@@ -7,15 +7,13 @@ import Path from 'path'
 import Axios, { AxiosInstance, AxiosResponse } from 'axios'
 import anyTest, { TestInterface, ExecutionContext } from 'ava'
 import Fsx from 'fs-extra'
-import Compression from 'compression'
 import { Server } from 'http'
-import { ok } from 'assert'
 import { LoremIpsum } from 'lorem-ipsum'
 import { Readable } from 'stream'
 import { Throttle } from 'stream-throttle'
 
 type MyProperties = {
-  originPort: number
+  serverPort: number
   tmpDir: Tmp.DirectoryResult
   server: Server
   proxyPort: number
@@ -29,7 +27,7 @@ test.beforeEach(async (t) => {
   t.context.tmpDir = await Tmp.dir({ unsafeCleanup: true })
   t.context.proxyPort = await GetPort()
   t.context.proxy = new PlaybackProxy({
-    cacheRoot: t.context.tmpDir.path,
+    saveDir: t.context.tmpDir.path,
     port: t.context.proxyPort,
     responseDebugHeaders: true,
   })
@@ -59,7 +57,7 @@ async function testProxySenario(
 ) {
   await t.context.proxy.start()
 
-  const targetUrl = `http://localhost:${t.context.originPort}/index.html?name=value`
+  const targetUrl = `http://localhost:${t.context.serverPort}/index.html?name=value`
 
   // Online
   await (async () => {
@@ -73,11 +71,11 @@ async function testProxySenario(
     if (options.testResponseHeader)
       await options.testResponseHeader(t, resOnline, 'online response header')
 
-    await t.context.proxy.saveSpec()
+    await t.context.proxy.saveNetwork()
     t.is(
-      t.context.proxy.spec.resourcesLength,
+      t.context.proxy.network.resourcesLength,
       1,
-      'offline proxy spec got the first resource.'
+      'offline proxy network got the first resource.'
     )
 
     if (options.testOnline)
@@ -110,24 +108,24 @@ async function testProxySenario(
     // 404 from offline
     await t.throwsAsync(
       async () => {
-        const urlNotFound = `http://localhost:${t.context.originPort}/not-found.html`
+        const urlNotFound = `http://localhost:${t.context.serverPort}/not-found.html`
         await t.context.axios.get(urlNotFound)
       },
       /404/,
       'offline proxy throws 404'
     )
 
-    await t.context.proxy.saveSpec()
+    await t.context.proxy.saveNetwork()
     t.is(
-      t.context.proxy.spec.resourcesLength,
+      t.context.proxy.network.resourcesLength,
       1,
-      'offline proxy spec got no resource.'
+      'offline proxy network got no resource.'
     )
   })()
 
   // Slight change response
   await (async () => {
-    const similarUrl = `http://localhost:${t.context.originPort}/index.html?name=value1`
+    const similarUrl = `http://localhost:${t.context.serverPort}/index.html?name=value1`
     const resSimilar = await t.context.axios.get(similarUrl)
     t.regex(
       resSimilar.data,
@@ -143,56 +141,21 @@ async function testProxySenario(
     if (options.testResponseHeader)
       await options.testResponseHeader(t, resSimilar, 'similar response header')
 
-    await t.context.proxy.saveSpec()
+    await t.context.proxy.saveNetwork()
     t.is(
-      t.context.proxy.spec.resourcesLength,
+      t.context.proxy.network.resourcesLength,
       1,
-      'offline proxy spec got no resource.'
+      'offline proxy network got no resource.'
     )
-  })()
-
-  // content cascading
-  await (async () => {
-    const cascadedOriginalPath = Path.join(
-      t.context.tmpDir.path,
-      'default',
-      'get',
-      'http',
-      `localhost~${t.context.originPort}`,
-      'index~name=value.html'
-    )
-    const originalHtml = await Fsx.readFile(cascadedOriginalPath)
-    const cascadedPath = Path.join(
-      t.context.tmpDir.path,
-      'cascade1',
-      'get',
-      'http',
-      `localhost~${t.context.originPort}`,
-      'index~name=value.html'
-    )
-    await Fsx.ensureFile(cascadedPath)
-    await Fsx.writeFile(
-      cascadedPath,
-      originalHtml.toString().replace(/the origin/g, 'CASCADED')
-    )
-
-    const resCascaded = await t.context.axios.get(targetUrl, {
-      headers: { 'x-proxy-cascade': 'cascade2,cascade1' },
-    })
-    t.regex(resCascaded.data, /CASCADED/, 'content cascaded')
-
-    const resNotCascaded = await t.context.axios.get(targetUrl)
-    t.notRegex(resNotCascaded.data, /CASCADED/, 'content not cascaded')
   })()
 
   await (async () => {
     // modify cache contents
     const cachePath = Path.join(
       t.context.tmpDir.path,
-      'default',
       'get',
       'http',
-      `localhost~${t.context.originPort}`,
+      `localhost~${t.context.serverPort}`,
       'index~name=value.html'
     )
     const cacheHtml = await Fsx.readFile(cachePath)
@@ -237,7 +200,7 @@ async function testProxySenario(
 
   await (async () => {
     // new request for mixed proxy
-    const mixedNewUrl = `http://localhost:${t.context.originPort}/index.html?longlonglonglonglonglonglonglonglonglong`
+    const mixedNewUrl = `http://localhost:${t.context.serverPort}/index.html?longlonglonglonglonglonglonglonglonglong`
     const resMixedNew = await t.context.axios.get(mixedNewUrl)
     t.regex(
       resMixedNew.data,
@@ -261,10 +224,9 @@ async function testProxySenario(
     // cache contents
     const mixedCachePath = Path.join(
       t.context.tmpDir.path,
-      'default',
       'get',
       'http',
-      `localhost~${t.context.originPort}`,
+      `localhost~${t.context.serverPort}`,
       'index~longlonglonglonglonglonglonglonglonglong.html'
     )
     const mixedCache = await Fsx.readFile(mixedCachePath)
@@ -274,11 +236,11 @@ async function testProxySenario(
       'cache created by mixed proxy and includes "the origin".'
     )
 
-    await t.context.proxy.saveSpec()
+    await t.context.proxy.saveNetwork()
     t.is(
-      t.context.proxy.spec.resourcesLength,
+      t.context.proxy.network.resourcesLength,
       2,
-      'mixed proxy spec got a new resource.'
+      'mixed proxy network got a new resource.'
     )
   })()
 
@@ -286,11 +248,11 @@ async function testProxySenario(
 }
 
 test('In no content-encoding', async (t) => {
-  t.context.originPort = await GetPort()
+  t.context.serverPort = await GetPort()
   t.context.server = HttpServer.createServer({
-    root: Path.join(__dirname, 'origin'),
+    root: Path.join(__dirname, 'server'),
   })
-  t.context.server.listen({ port: t.context.originPort })
+  t.context.server.listen({ port: t.context.serverPort })
 
   t.context.axios = Axios.create({
     proxy: { host: 'localhost', port: t.context.proxyPort },
@@ -301,19 +263,19 @@ test('In no content-encoding', async (t) => {
 
   await testProxySenario(t, {
     testResponseHeader: async (t, res) => {
-      t.is(res.headers['x-origin-content-encoding'], '')
-      t.is(res.headers['x-origin-transfer-size'], '126')
+      t.is(res.headers['x-playback-server-content-encoding'], '')
+      t.is(res.headers['x-playback-server-transfer-size'], '126')
     },
   })
 })
 
 test('In gzip content-encoding', async (t) => {
-  t.context.originPort = await GetPort()
+  t.context.serverPort = await GetPort()
   t.context.server = HttpServer.createServer({
-    root: Path.join(__dirname, 'origin'),
+    root: Path.join(__dirname, 'server'),
     gzip: true,
   })
-  t.context.server.listen({ port: t.context.originPort })
+  t.context.server.listen({ port: t.context.serverPort })
 
   t.context.axios = Axios.create({
     proxy: { host: 'localhost', port: t.context.proxyPort },
@@ -324,19 +286,19 @@ test('In gzip content-encoding', async (t) => {
 
   await testProxySenario(t, {
     testResponseHeader: async (t, res, message) => {
-      t.is(res.headers['x-origin-content-encoding'], 'gzip', message)
-      t.is(res.headers['x-origin-transfer-size'], '105', message)
+      t.is(res.headers['x-playback-server-content-encoding'], 'gzip', message)
+      t.is(res.headers['x-playback-server-transfer-size'], '105', message)
     },
     testOnline: async (t, res, message) => {
-      const resource = t.context.proxy.spec.getResource(0)
-      t.is(resource.origin.size, 115)
-      t.is(resource.origin.transfer, 105)
+      const resource = t.context.proxy.network.getResource(0)
+      t.is(resource.server.size, 115)
+      t.is(resource.server.transfer, 105)
     },
   })
 })
 
 test('TTFB', async (t) => {
-  t.context.originPort = await GetPort()
+  t.context.serverPort = await GetPort()
   t.context.server = Http.createServer((req, res) => {
     setTimeout(() => {
       res.writeHead(200, { 'Content-Type': 'text/plain' })
@@ -344,7 +306,7 @@ test('TTFB', async (t) => {
       res.end()
     }, 500)
   })
-  t.context.server.listen(t.context.originPort)
+  t.context.server.listen(t.context.serverPort)
 
   await t.context.proxy.start()
   t.context.axios = Axios.create({
@@ -352,14 +314,16 @@ test('TTFB', async (t) => {
   })
 
   // Recording
-  await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+  await t.context.axios.get(`http://localhost:${t.context.serverPort}/`)
   t.context.proxy.mode = 'offline'
 
   const started = +new Date()
   const resProxy = await t.context.axios.get(
-    `http://localhost:${t.context.originPort}/`
+    `http://localhost:${t.context.serverPort}/`
   )
-  const headerTtfb = parseInt(resProxy.headers['x-origin-ttfb'].toString())
+  const headerTtfb = parseInt(
+    resProxy.headers['x-playback-server-ttfb'].toString()
+  )
   const actualTime = +new Date() - started
   t.true(Math.abs(headerTtfb - 500) < 100)
   t.true(Math.abs(actualTime - 500) < 100)
@@ -369,14 +333,14 @@ test('Data rate', async (t) => {
   const content = Buffer.from(new LoremIpsum().generateParagraphs(100))
   const rate = content.length / 0.5
   const chunksize = content.length / 10
-  t.context.originPort = await GetPort()
+  t.context.serverPort = await GetPort()
   t.context.server = Http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
     let st = Readable.from([content])
     st = st.pipe(new Throttle({ rate, chunksize }))
     st.pipe(res)
   })
-  t.context.server.listen(t.context.originPort)
+  t.context.server.listen(t.context.serverPort)
 
   await t.context.proxy.start()
   t.context.axios = Axios.create({
@@ -384,13 +348,13 @@ test('Data rate', async (t) => {
   })
 
   // Recording
-  await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+  await t.context.axios.get(`http://localhost:${t.context.serverPort}/`)
   t.context.proxy.mode = 'offline'
 
   // Natural speed
   await (async () => {
     const started = +new Date()
-    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    await t.context.axios.get(`http://localhost:${t.context.serverPort}/`)
     const actualTime = +new Date() - started
     t.true(
       Math.abs(actualTime - 500) < 150,
@@ -402,7 +366,7 @@ test('Data rate', async (t) => {
   await (async () => {
     t.context.proxy.speed = 2.0
     const started = +new Date()
-    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    await t.context.axios.get(`http://localhost:${t.context.serverPort}/`)
     const actualTime = +new Date() - started
     t.true(
       Math.abs(actualTime - 250) < 100,
@@ -414,7 +378,7 @@ test('Data rate', async (t) => {
   await (async () => {
     t.context.proxy.speed = 0.5
     const started = +new Date()
-    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    await t.context.axios.get(`http://localhost:${t.context.serverPort}/`)
     const actualTime = +new Date() - started
     t.true(
       Math.abs(actualTime - 1000) < 100,
@@ -426,7 +390,7 @@ test('Data rate', async (t) => {
   await (async () => {
     t.context.proxy.throttling = false
     const started = +new Date()
-    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    await t.context.axios.get(`http://localhost:${t.context.serverPort}/`)
     const actualTime = +new Date() - started
     t.true(Math.abs(actualTime - 100) < 100, 'Offline response speed faster')
   })()
@@ -436,7 +400,7 @@ test('Data rate', async (t) => {
     t.context.proxy.throttling = false
     t.context.proxy.fixedDataRate = content.length / 1
     const started = +new Date()
-    await t.context.axios.get(`http://localhost:${t.context.originPort}/`)
+    await t.context.axios.get(`http://localhost:${t.context.serverPort}/`)
     const actualTime = +new Date() - started
     t.true(Math.abs(actualTime - 1000) < 150, 'Offline response speed slow')
   })()

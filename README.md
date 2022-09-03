@@ -1,25 +1,44 @@
-This is a HTTP proxy like VCR.
+# HTTP proxy that records resources as editable and playback them
 
-vcr
-https://www.npmjs.com/package/vcr
+## Install
 
-It assumed to use for web page performance tests.
+    yarn add http-playback-proxy
 
-If you are going to 2 tests to same page:
-
-- Performance test A -> https://example.com/
-- Performance test B -> https://example.com/
-
-Performance of https://example.com/ are not same always.
-
-`http-playback-proxy` tries to reproduces download lateycy and throughput for each request.
-
-- Recording -> `http-playback-proxy`(recording) -> https://exmaple.com/
-- Performance test A -> `http-playback-proxy`(playback) -> https://example.com/
-- Performance test B -> `http-playback-proxy`(playback) -> https://example.com/
-
-# Usage
+## Example
 
 ```js
+import { PlaybackProxy } from 'http-playback-proxy'
 
+async function main() {
+  const recorder = new PlaybackProxy({
+    saveDir: '/path/to/resources',
+    host: 'localhost',
+    port: 8000,
+    mode: 'online',
+  })
+
+  await recorder.start()
+
+  // Set "http://localhsot:8000" as HTTP proxy and send request
+
+  await recorder.stop()
+
+  // See /path/to/resources and edit some resources
+
+  const player = new PlaybackProxy({
+    saveDir: '/path/to/resources',
+    host: 'localhost',
+    port: 8000,
+    mode: 'online',
+  })
+
+  await player.start()
+
+  // Set "http://localhsot:8000" as HTTP proxy and send request
+  // Edited resource will changed
+
+  await player.stop()
+}
+
+main()
 ```
