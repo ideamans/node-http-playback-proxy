@@ -212,12 +212,10 @@ export class PlaybackProxy {
     ].join('')
 
     const response = ctx.proxyToClientResponse
-    const resource =
-      this.mode == 'offline'
-        ? // offline: best effort: lookup then nearest
-          this.network.findNearestResource(request.method || 'get', fullUrl)
-        : // mixed: lookup only
-          this.network.lookupResource(request.method || 'get', fullUrl)
+    const resource = this.network.lookupResource(
+      request.method || 'get',
+      fullUrl
+    )
     if (resource) {
       ctx.use(HttpMitmProxy.gunzip)
 

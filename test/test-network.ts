@@ -49,55 +49,10 @@ test('Resource in network', (t) => {
 
   t.is(network.lookupResource('get', sampleUrl1), undefined)
 
-  const res1 = network.newResource({ method: 'get', url: sampleUrl1 })
+  network.newResource({ method: 'get', url: sampleUrl1 })
   t.is(network.resourcesLength, 1)
   t.is(network.resourcesIndex['get'][sampleUrl1].url, sampleUrl1)
   t.is(network.lookupResource('get', sampleUrl1).url, sampleUrl1)
-
-  t.is(network.findNearestResource('post', sampleUrl1), undefined)
-  t.is(
-    network.findNearestResource(
-      'get',
-      'http://www.example.com/path/to/file?name1=value1&name2=value2'
-    ),
-    undefined
-  )
-  t.is(
-    network.findNearestResource(
-      'get',
-      'https://example.com/path/to/file?name1=value1&name2=value2'
-    ),
-    undefined
-  )
-  t.is(
-    network.findNearestResource(
-      'get',
-      'https://www.example.com/path/to/unmatch?name1=value1&name2=value2'
-    ),
-    undefined
-  )
-
-  const nearest1 = network.findNearestResource(
-    'get',
-    'https://www.example.com/path/to/file'
-  )
-  t.truthy(nearest1)
-  if (nearest1) t.is(nearest1.url, sampleUrl1)
-
-  const nearest2 = network.findNearestResource(
-    'get',
-    'https://www.example.com/path/to/file?name1=value1&name2=value2&name3=value3'
-  )
-  t.truthy(nearest2)
-  if (nearest2) t.is(nearest2.url, sampleUrl1)
-
-  const res2 = network.newResource({ method: 'get', url: sampleUrl2 })
-  const nearest3 = network.findNearestResource(
-    'get',
-    'https://www.example.com/path/to/file?name1=value1&name2=value2&name3=value3&name4=value4'
-  )
-  t.truthy(nearest3)
-  if (nearest3) t.is(nearest3.url, sampleUrl2)
 })
 
 test('Filter resources', (t) => {
