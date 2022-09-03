@@ -8,6 +8,13 @@ export class ProxyUrl extends URL {
   static maxFilenameLength = 196
   static fileUniqHashLength = 8
 
+  static clearParams(url: string, params: string[]) {
+    for (const param of params) {
+      url = url.replace(new RegExp(`([?&]${param}=)[^&]*`, 'g'), '$1')
+    }
+    return url
+  }
+
   get filePath(): string {
     let path = this.pathname
     if (path.endsWith('/')) {
