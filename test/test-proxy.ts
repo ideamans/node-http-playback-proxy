@@ -30,6 +30,7 @@ test.beforeEach(async (t) => {
     saveDir: t.context.tmpDir.path,
     port: t.context.proxyPort,
     responseDebugHeaders: true,
+    ignoreParams: ['ignore'],
   })
 })
 
@@ -57,7 +58,8 @@ async function testProxySenario(
 ) {
   await t.context.proxy.start()
 
-  const targetUrl = `http://localhost:${t.context.serverPort}/index.html?name=value`
+  const targetUrl = `http://localhost:${t.context.serverPort}/index.html?name=value&ignore=1`
+  const targetUrlIgnoreParam = `http://localhost:${t.context.serverPort}/index.html?name=value&ignore=2`
 
   // Online
   await (async () => {
@@ -87,21 +89,40 @@ async function testProxySenario(
 
   await (async () => {
     // Playback
-    const resPlayback = await t.context.axios.get(targetUrl)
+    const resPlayback1 = await t.context.axios.get(targetUrl)
     t.regex(
-      resPlayback.data,
+      resPlayback1.data,
       /the origin/,
       'offline proxy returns the same as the origin.'
     )
     t.is(
-      resPlayback.headers['x-playback'],
+      resPlayback1.headers['x-playback'],
       '1',
       'offline proxy but returns x-playback header.'
     )
     if (options.testResponseHeader)
       await options.testResponseHeader(
         t,
-        resPlayback,
+        resPlayback1,
+        'playback response header'
+      )
+
+    // Playback (ignore param)
+    const resPlayback2 = await t.context.axios.get(targetUrlIgnoreParam)
+    t.regex(
+      resPlayback2.data,
+      /the origin/,
+      'offline proxy returns the same as the origin.'
+    )
+    t.is(
+      resPlayback2.headers['x-playback'],
+      '1',
+      'offline proxy but returns x-playback header.'
+    )
+    if (options.testResponseHeader)
+      await options.testResponseHeader(
+        t,
+        resPlayback2,
         'playback response header'
       )
 
@@ -123,32 +144,6 @@ async function testProxySenario(
     )
   })()
 
-  // Slight change response
-  await (async () => {
-    const similarUrl = `http://localhost:${t.context.serverPort}/index.html?name=value1`
-    const resSimilar = await t.context.axios.get(similarUrl)
-    t.regex(
-      resSimilar.data,
-      /the origin/,
-      'offline proxy returns from similar url cache.'
-    )
-    t.is(
-      resSimilar.headers['x-playback'],
-      '1',
-      'offline proxy but returns x-playback header.'
-    )
-
-    if (options.testResponseHeader)
-      await options.testResponseHeader(t, resSimilar, 'similar response header')
-
-    await t.context.proxy.saveNetwork()
-    t.is(
-      t.context.proxy.network.resourcesLength,
-      1,
-      'offline proxy network got no resource.'
-    )
-  })()
-
   await (async () => {
     // modify cache contents
     const cachePath = Path.join(
@@ -156,7 +151,7 @@ async function testProxySenario(
       'get',
       'http',
       `localhost~${t.context.serverPort}`,
-      'index~name=value.html'
+      'index~name=value&ignore=.html'
     )
     const cacheHtml = await Fsx.readFile(cachePath)
     await Fsx.writeFile(
@@ -187,15 +182,26 @@ async function testProxySenario(
 
   await (async () => {
     // mixed proxy returns cache if exists
-    const resMixed = await t.context.axios.get(targetUrl)
-    t.regex(resMixed.data, /ORIGIN/, 'mixed proxy returns cache if exists.')
+    const resMixed1 = await t.context.axios.get(targetUrl)
+    t.regex(resMixed1.data, /ORIGIN/, 'mixed proxy returns cache if exists.')
     t.is(
-      resMixed.headers['x-playback'],
+      resMixed1.headers['x-playback'],
       '1',
       'offline proxy but returns x-playback header.'
     )
     if (options.testResponseHeader)
-      await options.testResponseHeader(t, resMixed, 'mixed response header')
+      await options.testResponseHeader(t, resMixed1, 'mixed response header')
+
+    // mixed proxy returns cache if exists (ignore param)
+    const resMixed2 = await t.context.axios.get(targetUrlIgnoreParam)
+    t.regex(resMixed2.data, /ORIGIN/, 'mixed proxy returns cache if exists.')
+    t.is(
+      resMixed2.headers['x-playback'],
+      '1',
+      'offline proxy but returns x-playback header.'
+    )
+    if (options.testResponseHeader)
+      await options.testResponseHeader(t, resMixed2, 'mixed response header')
   })()
 
   await (async () => {
