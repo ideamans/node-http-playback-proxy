@@ -91,13 +91,6 @@ export class ResourceTag {
   }
 }
 
-export type ResourceTree = {
-  [method: string]: {
-    [protocol: string]: {
-      [host: string]: { [path: string]: { [search: string]: Resource } }
-    }
-  }
-}
 export type ResourcesIndex = { [method: string]: { [url: string]: Resource } }
 export type ResourceGroup = { [group: string]: Resource[] }
 
@@ -108,7 +101,6 @@ export type ResourceFilterCallback = (
 
 export class Network {
   private resources: Resource[] = []
-  resourceTree: ResourceTree = {}
   resourcesIndex: ResourcesIndex = {}
   resourcesTags: ResourceTag[] = []
 
@@ -152,21 +144,11 @@ export class Network {
       this.resourcesIndex[res.method] || {})
     index[res.url] = res
 
-    // Tree
-    const byMethod = (this.resourceTree[res.method] =
-      this.resourceTree[res.method] || {})
-    const url = res.proxyUrl
-    const byProtocol = (byMethod[url.protocol] = byMethod[url.protocol] || {})
-    const byHost = (byProtocol[url.host] = byProtocol[url.host] || {})
-    const byPath = (byHost[url.pathname] = byHost[url.pathname] || {})
-    byPath[url.search] = res
-
     this.resourcesTags.push(new ResourceTag(res))
   }
 
   reIndex() {
     this.resourcesIndex = {}
-    this.resourceTree = {}
     this.resourcesTags = []
     for (let res of this.resources) {
       this.indexResource(res)
@@ -178,45 +160,6 @@ export class Network {
     const index = (this.resourcesIndex[method] =
       this.resourcesIndex[method] || {})
     return index[url]
-  }
-
-  findNearestResource(method: string, url: string) {
-    method = method.toLowerCase()
-    const match = this.lookupResource(method, url)
-    if (match) return match
-
-    // Traverse tree
-    const byProtocol = this.resourceTree[method]
-    if (!byProtocol) return
-
-    const res = new Resource({ method, url })
-    const u = res.proxyUrl
-
-    const byHost = byProtocol[u.protocol]
-    if (!byHost) return
-
-    const byPath = byHost[u.host]
-    if (!byPath) return
-
-    const bySearch = byPath[u.pathname]
-    if (!bySearch) return
-
-    const searchs = Object.keys(bySearch)
-    // Return nomatch if 0: never happen
-    if (searchs.length === 0) return
-
-    // Return if the path only one.
-    if (searchs.length == 1) return bySearch[searchs[0]]
-
-    // Sort by QueryString distance.
-    const theQs = QueryString.parse(u.search)
-    const tuples: [string, number][] = searchs.map((qs) => [
-      qs,
-      ProxyUrl.queryStringDistance(QueryString.parse(qs), theQs),
-    ])
-    const sorted = tuples.sort((a, b) => a[1] - b[1])
-
-    return bySearch[sorted[0][0]]
   }
 
   filterResources(cb: ResourceFilterCallback, orderAsc = true) {

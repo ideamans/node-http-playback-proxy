@@ -6,7 +6,7 @@
   "description": "",
   "homepage": "https://github.com/ideamans/node-http-playback-proxy",
   "scripts": {
-    "w": "ava -vws test/test-reproducibility.ts",
+    "w": "ava -vws test/test-proxy.ts",
     "test": "ava -v",
     "watch": "ava -vw",
     "build": "tsc",

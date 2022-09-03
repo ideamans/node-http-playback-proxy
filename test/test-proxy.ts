@@ -123,32 +123,6 @@ async function testProxySenario(
     )
   })()
 
-  // Slight change response
-  await (async () => {
-    const similarUrl = `http://localhost:${t.context.serverPort}/index.html?name=value1`
-    const resSimilar = await t.context.axios.get(similarUrl)
-    t.regex(
-      resSimilar.data,
-      /the origin/,
-      'offline proxy returns from similar url cache.'
-    )
-    t.is(
-      resSimilar.headers['x-playback'],
-      '1',
-      'offline proxy but returns x-playback header.'
-    )
-
-    if (options.testResponseHeader)
-      await options.testResponseHeader(t, resSimilar, 'similar response header')
-
-    await t.context.proxy.saveNetwork()
-    t.is(
-      t.context.proxy.network.resourcesLength,
-      1,
-      'offline proxy network got no resource.'
-    )
-  })()
-
   await (async () => {
     // modify cache contents
     const cachePath = Path.join(
