@@ -14,7 +14,8 @@
     "prepare": "npm run build",
     "command": "ts-node src/command.ts",
     "debug": "ts-node src/debug.ts",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write .",
+    "prepack": "npm install && npm run build"
   },
   "license": "MIT",
   "devDependencies": {
