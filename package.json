@@ -15,7 +15,7 @@
     "command": "ts-node src/command.ts",
     "debug": "ts-node src/debug.ts",
     "prettier": "prettier --write .",
-    "prepack": "npm install && npm run build"
+    "prepack": "yarn install && yarn build"
   },
   "license": "MIT",
   "devDependencies": {
